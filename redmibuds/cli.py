@@ -344,11 +344,13 @@ def cmd_hold(args):
         print(f"control en esta PC: esperando — {st['reason_text']}")
 
 
-AUTO_KEYS = {"salida": "auto_output", "pausa": "auto_pause", "reanudar": "auto_resume", "bateria": "battery_alerts"}
+AUTO_KEYS = {"salida": "auto_output", "pausa": "auto_pause", "reanudar": "auto_resume", "bateria": "battery_alerts",
+             "estuche": "case_reminder"}
 AUTO_LABEL = {"auto_output": "pasar el audio a las bocinas al quitártelos (y volver)",
               "auto_pause": "pausar al quitarte un audífono",
               "auto_resume": "reanudar al ponértelo",
-              "battery_alerts": "avisos de batería baja / carga completa"}
+              "battery_alerts": "avisos de batería baja / carga completa",
+              "case_reminder": "avisar si quedan fuera del estuche"}
 
 
 def cmd_auto(args):
@@ -485,7 +487,7 @@ def build_parser():
     s = sub.add_parser("hold", help="mantener el control de los audífonos en esta PC: on | off | status")
     s.add_argument("state", nargs="?", default="status", choices=["on", "off", "status"])
     s.set_defaults(fn=None)
-    s = sub.add_parser("auto", help="automatizaciones: buds auto [salida|pausa|reanudar|bateria] [on|off]")
+    s = sub.add_parser("auto", help="automatizaciones: buds auto [salida|pausa|reanudar|bateria|estuche] [on|off]")
     s.add_argument("what", nargs="?", choices=list(AUTO_KEYS))
     s.add_argument("state", nargs="?", choices=["on", "off"])
     s.set_defaults(fn=None)

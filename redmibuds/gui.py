@@ -1039,7 +1039,9 @@ class Window(Adw.ApplicationWindow):
                   "bocinas de la PC, y vuelve al ponértelos"),
                  ("auto_pause", "Pausar al quitarte un audífono", "Pausa lo que suene en la PC"),
                  ("auto_resume", "Reanudar al ponértelo", "Solo lo que se pausó, si fue hace menos de 15 min"),
-                 ("battery_alerts", "Avisos de batería", "Al 20 % y 10 %, y cuando terminan de cargar")]
+                 ("battery_alerts", "Avisos de batería", "Al 20 % y 10 %, y cuando terminan de cargar"),
+                 ("case_reminder", "Avisar si no los guardas", "Si se desconectan fuera del estuche, o llevan "
+                  "10 min afuera sin usar")]
 
     def _build_automations(self):
         g = Adw.PreferencesGroup(title="Automatizaciones en esta PC",

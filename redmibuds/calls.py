@@ -53,7 +53,7 @@ class CallMic:
     def _watch(self):
         while True:
             try:
-                p = subprocess.Popen(["pactl", "subscribe"], stdout=subprocess.PIPE, text=True)
+                p = subprocess.Popen(["pactl", "subscribe"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
                 for line in p.stdout:
                     if "source-output" in line or "'change' on card" in line or "on server" in line:
                         self._kick.set()

@@ -119,7 +119,7 @@ class AppProfiles:
     def _watch_audio(self):
         while True:
             try:
-                p = subprocess.Popen(["pactl", "subscribe"], stdout=subprocess.PIPE, text=True)
+                p = subprocess.Popen(["pactl", "subscribe"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
                 for line in p.stdout:
                     if "sink-input" in line:
                         self._kick.set()

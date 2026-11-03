@@ -140,6 +140,11 @@ class Holder:
         t0 = time.time()
         with self.lock:
             st = d.read_state(self.client)
+            if not st.get("battery") and not st.get("mode"):
+                # one lost burst happens now and then (e.g. while the phone streams); don't drop the session
+                log("lectura sin respuesta; reintento")
+                time.sleep(0.5)
+                st = d.read_state(self.client)
         if time.time() - t0 > 1.5:
             missing = sorted({"info", "run_info", *[f"config_{c:02x}" for c in p.ALL_CONFIGS]} - set(st["raw"]))
             log(f"lectura lenta ({time.time() - t0:.1f}s), sin respuesta: {missing}")

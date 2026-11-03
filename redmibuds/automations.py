@@ -22,6 +22,7 @@ DEFAULTS = {
     "auto_resume": True,       # resume when it goes back in
     "battery_alerts": True,    # low battery / fully charged notifications
     "auto_output": True,       # both earbuds out -> PC speakers; back in -> earbuds
+    "case_reminder": True,     # warn when the earbuds are left out of the case
     "call_mic": "calls",       # earbuds' mic: calls | any | never (see calls.py)
     "call_apps": [],           # extra app names treated as call apps
     "app_profiles": [],        # per-app noise mode / EQ (see profiles.py)
@@ -29,6 +30,8 @@ DEFAULTS = {
     "gesture_actions": {},     # media key from the earbuds -> PC action (see gestures.py)
 }
 RESUME_WINDOW = 15 * 60       # don't resume something paused longer ago than this
+LEFT_OUT_AFTER = 10 * 60      # remind after the earbuds sit outside the case (not worn) this long
+SIDE_NAME = {"left": "izquierdo", "right": "derecho"}
 
 
 def load_config():
@@ -93,13 +96,23 @@ class Automations:
         self.batt_alerted = {}     # side -> lowest threshold already announced
         self.charged_alerted = set()
         self.output_moved = None   # (earbuds sink, PC sink) after we sent the audio to the speakers
+        self.last_wear = None      # survives disconnects (for the "left out of the case" alert)
+        self.out_since = 0
+        self.out_alerted = False
 
     def on_state(self, mac, st):
         """Called by the daemon with every fresh state (and None when the earbuds disconnect)."""
         cfg = load_config()
         if st is None:
             self.wear = None
+            if cfg["case_reminder"]:
+                self._left_out_on_disconnect(mac)
             return
+        try:
+            if st.get("wear") and cfg["case_reminder"]:
+                self._left_out(st["wear"])
+        except Exception as e:  # noqa: BLE001
+            log("aviso de estuche falló:", e)
         try:
             self._output(mac, self.wear, st.get("wear"), cfg)   # before _wear: resume must play on the buds
         except Exception as e:  # noqa: BLE001
@@ -147,6 +160,51 @@ class Automations:
             for pl in players:
                 _run("playerctl", "-p", pl, "play")
             log("auto-reanudar:", ", ".join(players))
+
+    # ---- earbuds left outside the case ----
+
+    @staticmethod
+    def _outside(wear):
+        """Sides lying outside the case, or [] if one is worn (then they're with you)."""
+        if not wear or "ear" in wear.values():
+            return []
+        return [s for s in ("left", "right") if wear.get(s) == "out"]
+
+    def _left_out(self, wear):
+        self.last_wear = dict(wear)
+        out = self._outside(wear)
+        if not out:
+            self.out_since, self.out_alerted = 0, False
+            return
+        if not self.out_since:
+            self.out_since = time.time()
+        elif not self.out_alerted and time.time() - self.out_since >= LEFT_OUT_AFTER:
+            self.out_alerted = True
+            two = len(out) == 2
+            notify("¿Guardaste los audífonos?",
+                   f"{_subject(out)} {'llevan' if two else 'lleva'} {LEFT_OUT_AFTER // 60} min fuera del "
+                   f"estuche y sin usar; así {'se descargan' if two else 'se descarga'}.")
+            log("aviso de estuche:", out)
+
+    def _left_out_on_disconnect(self, mac):
+        out = self._outside(self.last_wear)
+        self.last_wear, self.out_since, self.out_alerted = None, 0, False
+        if not out:
+            return
+
+        def check():
+            time.sleep(5)          # a session can end without the earbuds leaving (e.g. the phone took over)
+            info = _run("bluetoothctl", "info", mac)
+            if "Connected: yes" in info:
+                return
+            two = len(out) == 2
+            notify("Los audífonos se desconectaron fuera del estuche",
+                   f"{_subject(out)} {'quedaron' if two else 'quedó'} afuera: "
+                   f"{'guárdalos' if two else 'guárdalo'} para que no se descargue{'n' if two else ''} "
+                   "ni se pierda" + ("n." if two else "."), "critical")
+            log("aviso de estuche: desconectados afuera", out)
+        import threading
+        threading.Thread(target=check, daemon=True).start()
 
     # ---- audio output follows the earbuds ----
 
@@ -207,3 +265,7 @@ class Automations:
             notify("Batería baja" if not critical else "Batería muy baja",
                    f"Audífono {sides}: {lowest} %", "critical" if critical else "normal")
             log("aviso de batería:", low)
+
+
+def _subject(sides):
+    return "Los dos audífonos" if len(sides) == 2 else f"El audífono {SIDE_NAME[sides[0]]}"

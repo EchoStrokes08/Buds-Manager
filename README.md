@@ -77,6 +77,8 @@ cuando el celular tiene el control):
 - **Avisos de batería**: notificación al bajar a 20 % y a 10 % (crítica), y cuando terminan de cargar.
 - **Salida automática**: al quitarte los dos audífonos el audio pasa a las bocinas de la PC; al ponerte
   uno vuelve a los audífonos (si no elegiste otra salida mientras tanto).
+- **¿Guardaste los audífonos?**: aviso si se desconectan de la PC estando afuera (ni puestos ni en el
+  estuche), o si llevan 10 min afuera sin usar. Si te los llevas puestos no avisa.
 - **Micrófono solo en llamadas** (`buds mic calls|any|never`, o en Conexión): usar el micrófono de unos
   audífonos Bluetooth baja la música a calidad de llamada. WirePlumber lo hacía con *cualquier* app que
   grabara, porque los audífonos eran el micrófono predeterminado. En modo `calls` el servicio apaga el
@@ -88,7 +90,7 @@ cuando el celular tiene el control):
 
 ```
 buds auto                 # ver qué está activo
-buds auto pausa off       # salida | pausa | reanudar | bateria  on|off
+buds auto pausa off       # salida | pausa | reanudar | bateria | estuche  on|off
 ```
 
 Se guarda en `~/.config/redmi-buds/config.json` (también `low_levels`, por defecto `[20, 10]`).
@@ -175,4 +177,6 @@ tiene el control.
 ## Pendiente
 
 - Gesto tipo `0x05` con acción `0x0b` (propio de los 8 Pro, sin identificar).
-- Audio espacial, LDAC, modo juego, prueba de ajuste: requieren capturar el tráfico de la app Xiaomi Earbuds en Android.
+- Modo juego y configs `0x75`, `0x23`, `0x66`: requieren otra captura de la app Xiaomi en Android.
+- LE Audio: el adaptador de la PC lo soporta (CIS/ISO), pero los 8 Pro (firmware 3.2.2.6) no anuncian
+  servicios LE Audio (sin `184e`/`1850`/`1853` en un escaneo LE, 2026-11-03).
