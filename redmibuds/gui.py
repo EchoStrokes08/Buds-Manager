@@ -994,6 +994,13 @@ class Window(Adw.ApplicationWindow):
         threading.Thread(target=go, daemon=True).start()
         return False
 
+    def _finder(self):
+        if not self.state:
+            self.toast("Los audífonos no están conectados a esta PC", 3)
+            return
+        from .finder_gui import FinderDialog
+        FinderDialog(self).present(self)
+
     def _hearing_test(self, *_):
         if not self.state:
             self.toast("Los audífonos no están disponibles", 3)
@@ -1185,6 +1192,12 @@ class Window(Adw.ApplicationWindow):
         stop.connect("clicked", lambda *_: self.run("buscar", lambda c: d.find(c, "stop")))
         btns.attach(stop, 1, 1, 1, 1)
         g.add(btns)
+        hot = Adw.ActionRow(title="Frío o caliente", subtitle="Suenan y una barra te dice si te acercas",
+                            activatable=True, margin_top=12, css_classes=["card"])
+        hot.add_prefix(Gtk.Image(icon_name="find-location-symbolic"))
+        hot.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+        hot.connect("activated", lambda *_: self._finder())
+        g.add(hot)
         box.append(g)
 
         g = Adw.PreferencesGroup(title="Información")

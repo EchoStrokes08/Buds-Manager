@@ -1,0 +1,3 @@
+# Buds Manager: lets members of "wheel" read the signal strength of a connected Bluetooth device
+# (used by "Buscar audífonos → frío o caliente"). Only the read-only "conn-info" command is allowed.
+%wheel ALL=(root) NOPASSWD: /usr/bin/btmgmt conn-info -t 0 *

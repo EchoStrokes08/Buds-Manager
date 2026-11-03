@@ -18,6 +18,9 @@ if [[ "${1:-}" == "--uninstall" ]]; then
     rm -f "$UNITS/buds-tray.service" "$UNITS/buds-manager-daemon.service"
     systemctl --user daemon-reload
     rm -f "$BIN/buds" "$BIN/buds-manager" "$BIN/buds-tray" "$APPS/$APP_ID.desktop"
+    if sudo -n -l /usr/bin/btmgmt conn-info -t 0 00:00:00:00:00:00 >/dev/null 2>&1; then
+        sudo rm -f /etc/sudoers.d/71-redmi-buds-rssi
+    fi
     if [[ -f "$UDEV" ]]; then
         say "Quitando la regla udev (pide tu contraseña)…"
         sudo rm -f "$UDEV" && sudo udevadm control --reload
@@ -60,6 +63,18 @@ systemctl --user enable --now buds-tray.service >/dev/null 2>&1 \
     || echo "Aviso: no pude activar el ícono de la bandeja (¿sesión sin graphical-session.target?)"
 if systemctl --user is-enabled buds-manager-daemon.service >/dev/null 2>&1; then
     systemctl --user restart buds-manager-daemon.service
+fi
+
+# --- regla sudo: leer la señal Bluetooth (buscador «frío o caliente») ---
+SUDOERS="/etc/sudoers.d/71-redmi-buds-rssi"
+if ! sudo -n -l /usr/bin/btmgmt conn-info -t 0 00:00:00:00:00:00 >/dev/null 2>&1; then
+    say "Permiso para leer la señal Bluetooth (solo «btmgmt conn-info»; pide tu contraseña)…"
+    if visudo -cf "$SRC/71-redmi-buds-rssi.sudoers" >/dev/null && \
+       sudo install -m440 "$SRC/71-redmi-buds-rssi.sudoers" "$SUDOERS"; then
+        :
+    else
+        echo "Sin esta regla, el buscador «frío o caliente» no mide la señal (lo demás funciona)."
+    fi
 fi
 
 # --- regla udev (atajos con los gestos) ---
