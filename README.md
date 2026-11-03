@@ -117,6 +117,27 @@ Necesita el servicio activo (`buds hold on`) y la regla udev para leer `/dev/inp
 
 - Waybar: módulo `custom/buds` (clic: siguiente modo, clic derecho: ANC/apagado, clic central: Buds Manager).
 - Hyprland: `SUPER+B` siguiente modo, `SUPER+SHIFT+B` ANC/apagado.
+- **Bandeja** (`buds-tray`, servicio `buds-tray.service` ligado a la sesión gráfica): ícono en la bandeja de
+  Waybar (StatusNotifierItem). Clic: abre Buds Manager. Menú: batería, modo de ruido, ecualizador.
+  Tooltip con modo y batería. Instalar: `cp buds-tray.service ~/.config/systemd/user/ &&
+  systemctl --user enable --now buds-tray`.
+
+## Perfiles por app
+
+En **Sonido → Perfiles por app** (o `app_profiles` en `config.json`): cambia el control de ruido y/o el
+ecualizador mientras usas una app, y al dejarla lo devuelve como estaba (salvo que lo hayas cambiado a mano).
+
+- **En primer plano**: mientras su ventana está enfocada (clase de ventana de Hyprland; espera 1,5 s para
+  no saltar con cada alt-tab).
+- **Mientras suena**: mientras la app reproduce audio, aunque esté detrás (flujos de PipeWire).
+- Si aplican los dos, gana el de primer plano. Lo ejecuta el servicio (`profiles.py`).
+
+```json
+"app_profiles": [
+  {"app": "spotify", "when": "playing", "mode": null, "eq": "bass"},
+  {"app": "zoom", "when": "focused", "mode": "transparency", "eq": "voice"}
+]
+```
 
 ## Protocolo descubierto con la captura de la app Xiaomi (2026-11-01)
 
