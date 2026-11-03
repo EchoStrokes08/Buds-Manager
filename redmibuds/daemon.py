@@ -215,6 +215,10 @@ def main():
     holder = Holder()
     holder.gestures = GestureListener()
     holder.gestures.start()
+    from .calls import CallMic
+    from .cli import find_mac
+    holder.callmic = CallMic(lambda: holder.mac or find_mac())
+    holder.callmic.start()
 
     class Handler(socketserver.StreamRequestHandler):
         def handle(self):

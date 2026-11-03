@@ -344,8 +344,9 @@ def cmd_hold(args):
         print(f"control en esta PC: esperando — {st['reason_text']}")
 
 
-AUTO_KEYS = {"pausa": "auto_pause", "reanudar": "auto_resume", "bateria": "battery_alerts"}
-AUTO_LABEL = {"auto_pause": "pausar al quitarte un audífono",
+AUTO_KEYS = {"salida": "auto_output", "pausa": "auto_pause", "reanudar": "auto_resume", "bateria": "battery_alerts"}
+AUTO_LABEL = {"auto_output": "pasar el audio a las bocinas al quitártelos (y volver)",
+              "auto_pause": "pausar al quitarte un audífono",
               "auto_resume": "reanudar al ponértelo",
               "battery_alerts": "avisos de batería baja / carga completa"}
 
@@ -360,6 +361,20 @@ def cmd_auto(args):
         a.save_config(cfg)
     for key, label in AUTO_LABEL.items():
         print(f"{'sí' if cfg[key] else 'no':3} {label}")
+    from .calls import MODES
+    print(f"micrófono de los audífonos: {MODES.get(cfg['call_mic'], cfg['call_mic']).lower()}  (buds mic)")
+
+
+def cmd_mic(args):
+    from . import automations as a
+    from .calls import MODES
+    cfg = a.load_config()
+    if args.mode:
+        cfg["call_mic"] = args.mode
+        a.save_config(cfg)
+    print("micrófono de los audífonos:", MODES[cfg["call_mic"]].lower())
+    if not remote.daemon_status():
+        print("Aviso: el servicio está apagado (buds hold on); sin él manda WirePlumber.")
 
 
 def cmd_atajos(args):
@@ -470,9 +485,12 @@ def build_parser():
     s = sub.add_parser("hold", help="mantener el control de los audífonos en esta PC: on | off | status")
     s.add_argument("state", nargs="?", default="status", choices=["on", "off", "status"])
     s.set_defaults(fn=None)
-    s = sub.add_parser("auto", help="automatizaciones: buds auto [pausa|reanudar|bateria] [on|off]")
+    s = sub.add_parser("auto", help="automatizaciones: buds auto [salida|pausa|reanudar|bateria] [on|off]")
     s.add_argument("what", nargs="?", choices=list(AUTO_KEYS))
     s.add_argument("state", nargs="?", choices=["on", "off"])
+    s.set_defaults(fn=None)
+    s = sub.add_parser("mic", help="cuándo usar el micrófono de los audífonos: calls (solo llamadas) | any | never")
+    s.add_argument("mode", nargs="?", choices=["calls", "any", "never"])
     s.set_defaults(fn=None)
     s = sub.add_parser("atajos", aliases=["shortcuts"],
                        help="qué hace la PC con cada gesto: buds atajos [tecla] [acción | cmd:<comando>]")
@@ -493,6 +511,8 @@ def main(argv=None):
         return cmd_hold(args)
     if args.cmd == "auto":
         return cmd_auto(args)
+    if args.cmd == "mic":
+        return cmd_mic(args)
     if args.cmd in ("atajos", "shortcuts"):
         return cmd_atajos(args)
     if args.cmd == "waybar":

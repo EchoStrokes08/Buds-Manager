@@ -21,6 +21,9 @@ DEFAULTS = {
     "auto_pause": True,        # pause when an earbud leaves the ear
     "auto_resume": True,       # resume when it goes back in
     "battery_alerts": True,    # low battery / fully charged notifications
+    "auto_output": True,       # both earbuds out -> PC speakers; back in -> earbuds
+    "call_mic": "calls",       # earbuds' mic: calls | any | never (see calls.py)
+    "call_apps": [],           # extra app names treated as call apps
     "low_levels": [20, 10],
     "gesture_actions": {},     # media key from the earbuds -> PC action (see gestures.py)
 }
@@ -88,6 +91,7 @@ class Automations:
         self.paused_count = 0      # earbuds in ear right before the pause
         self.batt_alerted = {}     # side -> lowest threshold already announced
         self.charged_alerted = set()
+        self.output_moved = None   # (earbuds sink, PC sink) after we sent the audio to the speakers
 
     def on_state(self, mac, st):
         """Called by the daemon with every fresh state (and None when the earbuds disconnect)."""
@@ -95,6 +99,10 @@ class Automations:
         if st is None:
             self.wear = None
             return
+        try:
+            self._output(mac, self.wear, st.get("wear"), cfg)   # before _wear: resume must play on the buds
+        except Exception as e:  # noqa: BLE001
+            log("cambio de salida falló:", e)
         try:
             self._wear(mac, st.get("wear"), cfg)
         except Exception as e:  # noqa: BLE001 - an automation must never kill the daemon
@@ -138,6 +146,30 @@ class Automations:
             for pl in players:
                 _run("playerctl", "-p", pl, "play")
             log("auto-reanudar:", ", ".join(players))
+
+    # ---- audio output follows the earbuds ----
+
+    def _output(self, mac, prev, wear, cfg):
+        from . import audio
+        if not prev or not wear or not cfg["auto_output"]:
+            return
+        before, now = _in_ear(prev), _in_ear(wear)
+        if before > 0 and now == 0:
+            sink = audio.default_sink()
+            pc = audio.pc_sink()
+            if pc and audio.is_buds_node(sink, mac):
+                audio.set_default_sink(pc)
+                self.output_moved = (sink, pc)
+                log("salida: audífonos fuera →", pc)
+                notify("Audio en las bocinas de la PC", "Vuelve a los audífonos al ponértelos")
+        elif before == 0 and now > 0 and self.output_moved:
+            buds, pc = self.output_moved
+            self.output_moved = None
+            if audio.default_sink() != pc:
+                return                  # the user picked another output meanwhile; leave it
+            target = audio.buds_sink(mac) or buds
+            audio.set_default_sink(target)
+            log("salida: audífonos puestos →", target)
 
     # ---- battery ----
 

@@ -20,6 +20,8 @@ from .bluetooth import Bluez  # noqa: E402
 from . import audio  # noqa: E402
 from . import remote  # noqa: E402
 from . import gestures as gest  # noqa: E402
+from . import automations as autom  # noqa: E402
+from .calls import MODES as MIC_MODES  # noqa: E402
 from .cli import hold_enabled, set_hold  # noqa: E402
 from .cli import INITIAL_BACKUP, STATE_DIR, find_mac, refresh_waybar, save_backup, _freq_label  # noqa: E402
 
@@ -851,6 +853,7 @@ class Window(Adw.ApplicationWindow):
             self.bool_rows[key] = row
             g.add(row)
         box.append(g)
+        box.append(self._build_automations())
 
         g = Adw.PreferencesGroup(title="Prueba de ajuste",
                                  description="Comprueba si las almohadillas sellan bien. Ponte los dos "
@@ -903,6 +906,33 @@ class Window(Adw.ApplicationWindow):
             g.add(row)
         box.append(g)
         return box
+
+    AUTO_ROWS = [("auto_output", "Cambiar a las bocinas", "Al quitarte los dos audífonos el audio pasa a las "
+                  "bocinas de la PC, y vuelve al ponértelos"),
+                 ("auto_pause", "Pausar al quitarte un audífono", "Pausa lo que suene en la PC"),
+                 ("auto_resume", "Reanudar al ponértelo", "Solo lo que se pausó, si fue hace menos de 15 min"),
+                 ("battery_alerts", "Avisos de batería", "Al 20 % y 10 %, y cuando terminan de cargar")]
+
+    def _build_automations(self):
+        g = Adw.PreferencesGroup(title="Automatizaciones en esta PC",
+                                 description="Las hace el servicio de «Mantener el control en esta PC» "
+                                             "(pestaña Conexión).")
+        cfg = autom.load_config()
+        self.auto_rows = {}
+        for key, title, sub in self.AUTO_ROWS:
+            row = self._switch(title, sub, lambda on, key=key: self._set_auto(key, on))
+            row.set_active(bool(cfg.get(key)))
+            self.auto_rows[key] = row
+            g.add(row)
+        return g
+
+    def _set_auto(self, key, value):
+        cfg = autom.load_config()
+        cfg[key] = value
+        try:
+            autom.save_config(cfg)
+        except OSError as e:
+            self.toast(f"⚠ {e}", 4)
 
     def _build_menu(self):
         menu = Gio.Menu()
@@ -990,8 +1020,10 @@ class Window(Adw.ApplicationWindow):
 
     def _build_codec(self):
         g = Adw.PreferencesGroup(title="Calidad de audio en esta PC",
-                                 description="LDAC da la mejor calidad. El modo llamadas activa el micrófono "
-                                             "de los audífonos pero baja mucho la calidad de la música.")
+                                 description="LDAC da la mejor calidad. Usar el micrófono de los audífonos "
+                                             "baja la música a calidad de llamada: con «Solo en llamadas» se "
+                                             "activa con Discord, Zoom, Telegram o el navegador y vuelve a la "
+                                             "música al colgar; las demás apps usan el micrófono de la PC.")
         self.profile_row = Adw.ComboRow(title="Códec")
         self.profile_row.pairs = []
         self.profile_row.connect("notify::selected", self._on_profile)
@@ -999,6 +1031,15 @@ class Window(Adw.ApplicationWindow):
         self.ldac_row = self._combo("Calidad LDAC", audio.LDAC_QUALITY, self._on_ldac,
                                     subtitle="Al cambiarla el audio se corta un par de segundos")
         g.add(self.ldac_row)
+        modes = list(MIC_MODES.items())
+        self.mic_row = self._combo("Micrófono de los audífonos", modes,
+                                   lambda m: (self._set_auto("call_mic", m),
+                                              self.toast(f"Micrófono de los audífonos: {MIC_MODES[m].lower()}")),
+                                   )
+        self._updating = True
+        self._select(self.mic_row, autom.load_config().get("call_mic", "calls"))
+        self._updating = False
+        g.add(self.mic_row)
         return g
 
     def _update_codec(self):

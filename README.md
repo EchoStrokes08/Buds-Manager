@@ -75,10 +75,20 @@ cuando el celular tiene el control):
   solo si el audio sale por los audífonos. Al ponértelo de nuevo se reanuda únicamente lo que se pausó
   (si fue hace menos de 15 min).
 - **Avisos de batería**: notificación al bajar a 20 % y a 10 % (crítica), y cuando terminan de cargar.
+- **Salida automática**: al quitarte los dos audífonos el audio pasa a las bocinas de la PC; al ponerte
+  uno vuelve a los audífonos (si no elegiste otra salida mientras tanto).
+- **Micrófono solo en llamadas** (`buds mic calls|any|never`, o en Conexión): usar el micrófono de unos
+  audífonos Bluetooth baja la música a calidad de llamada. WirePlumber lo hacía con *cualquier* app que
+  grabara, porque los audífonos eran el micrófono predeterminado. En modo `calls` el servicio apaga el
+  cambio automático de WirePlumber, deja el micrófono de la PC como predeterminado y solo cambia al
+  perfil de llamada cuando graba una app de llamadas (Discord, Zoom, Teams, Telegram, Signal, Slack,
+  navegadores…; añade otras en `call_apps`). Mueve esa grabación al micrófono de los audífonos y, 3 s
+  después de colgar, vuelve al códec de música que tenías. `any` = comportamiento de WirePlumber;
+  `never` = nunca usar el micrófono de los audífonos.
 
 ```
 buds auto                 # ver qué está activo
-buds auto pausa off       # pausa | reanudar | bateria  on|off
+buds auto pausa off       # salida | pausa | reanudar | bateria  on|off
 ```
 
 Se guarda en `~/.config/redmi-buds/config.json` (también `low_levels`, por defecto `[20, 10]`).

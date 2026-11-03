@@ -141,7 +141,96 @@ monitor.bluez.rules = [
 """)
     _, before = profiles(mac)
     subprocess.run(["systemctl", "--user", "restart", "wireplumber"], timeout=15)
-    if before is None or is_music(before):
+    if not (before or "").startswith("headset"):     # unless a call was using the mic
         # the restart drops the A2DP link; bring the music back on the same codec
         time.sleep(2)
-        ensure_music(mac, prefer=before, timeout=12)
+        ensure_music(mac, prefer=before if is_music(before) else None, timeout=12)
+
+
+# ---- sinks / sources (used by the daemon's automations) ----
+
+def _json(*args):
+    r = _pactl("-f", "json", *args)
+    if not r or r.returncode:
+        return []
+    try:
+        import json
+        return json.loads(r.stdout)
+    except ValueError:
+        return []
+
+
+def default_sink():
+    r = _pactl("get-default-sink")
+    return r.stdout.strip() if r and not r.returncode else ""
+
+
+def default_source():
+    r = _pactl("get-default-source")
+    return r.stdout.strip() if r and not r.returncode else ""
+
+
+def set_default_sink(name):
+    _pactl("set-default-sink", name)
+
+
+def set_default_source(name):
+    _pactl("set-default-source", name)
+
+
+def is_buds_node(name, mac):
+    return name.startswith("bluez_") and mac.replace(":", "_").upper() in name.replace(":", "_").upper()
+
+
+def pc_sink():
+    """The PC's own speakers/headphone jack: the first non-Bluetooth sink."""
+    for s in _json("list", "sinks"):
+        if not s["name"].startswith("bluez_"):
+            return s["name"]
+    return None
+
+
+def pc_source():
+    """The PC's own microphone (not a monitor, not Bluetooth)."""
+    for s in _json("list", "sources"):
+        n = s["name"]
+        if not n.endswith(".monitor") and not n.startswith("bluez_"):
+            return n
+    return None
+
+
+def buds_sink(mac):
+    for s in _json("list", "sinks"):
+        if is_buds_node(s["name"], mac):
+            return s["name"]
+    return None
+
+
+def buds_mic(mac):
+    """The earbuds' microphone. Call it once the card is in the call profile: in music mode WirePlumber's
+    virtual mic (bluez5.loopback) also exists but records silence."""
+    found = [s for s in _json("list", "sources")
+             if is_buds_node(s["name"], mac) and not s["name"].endswith(".monitor")]
+    found.sort(key=lambda s: bool(s["properties"].get("bluez5.loopback")))   # a direct HFP source first
+    return found[0]["name"] if found else None
+
+
+def recordings():
+    """Active recording streams: [{index, app, binary, role, source}]."""
+    out = []
+    for o in _json("list", "source-outputs"):
+        pr = o.get("properties", {})
+        out.append({"index": o["index"], "source": o.get("source"),
+                    "app": pr.get("application.name", ""), "binary": pr.get("application.process.binary", ""),
+                    "role": pr.get("media.role", ""), "name": pr.get("media.name", "")})
+    return out
+
+
+def move_recording(index, source):
+    _pactl("move-source-output", str(index), source)
+
+
+def wp_autoswitch(on):
+    """WirePlumber's own 'switch to headset when any app records' (persisted)."""
+    subprocess.run(["wpctl", "settings", "--save", "bluetooth.autoswitch-to-headset-profile",
+                    "true" if on else "false"], capture_output=True, timeout=5)
