@@ -54,7 +54,9 @@ done
 case ":$PATH:" in *":$BIN:"*) ;; *) echo "Aviso: añade $BIN a tu PATH" ;; esac
 
 # --- lanzador ---
-install -m644 "$SRC/$APP_ID.desktop" "$APPS/$APP_ID.desktop"
+# ruta completa: el PATH de la sesión gráfica (lanzadores como fuzzel) a menudo no incluye ~/.local/bin
+sed "s|^Exec=buds-manager|Exec=$BIN/buds-manager|" "$SRC/$APP_ID.desktop" > "$APPS/$APP_ID.desktop"
+chmod 644 "$APPS/$APP_ID.desktop"
 
 # --- servicios de usuario ---
 install -m644 "$SRC/buds-manager-daemon.service" "$SRC/buds-tray.service" "$UNITS/"

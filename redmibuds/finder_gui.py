@@ -11,18 +11,21 @@ from gi.repository import Adw, GLib, Gtk  # noqa: E402
 from . import device as d  # noqa: E402
 from . import rssi  # noqa: E402
 
-# RSSI range mapped onto the meter (dBm): about -90 (far / walls) … -40 (right next to the PC)
-WEAK, STRONG = -90, -40
+# Classic Bluetooth reports RSSI relative to the "golden receive power range": 0 while the signal is good
+# (anywhere reasonably close), negative dB once it gets weaker. Some adapters report absolute dBm instead.
+REL_WEAK = -20          # relative scale: 0 = good … -20 = about to lose the link
+ABS_WEAK, ABS_STRONG = -90, -40
 
 
-def _words(v):
-    if v >= -55:
-        return "Muy cerca"
-    if v >= -65:
-        return "Cerca"
-    if v >= -75:
-        return "Lejos"
-    return "Muy lejos"
+def _scale(v):
+    """0..1 meter value and a word, for either kind of reading."""
+    if v > -30:   # relative reading
+        frac = max(0.0, min(1.0, 1 - v / REL_WEAK))
+        word = "Cerca" if v >= 0 else "A media distancia" if v >= -6 else "Lejos" if v >= -12 else "Muy lejos"
+    else:
+        frac = max(0.0, min(1.0, (v - ABS_WEAK) / (ABS_STRONG - ABS_WEAK)))
+        word = "Muy cerca" if v >= -55 else "Cerca" if v >= -65 else "Lejos" if v >= -75 else "Muy lejos"
+    return frac, word
 
 
 class FinderDialog(Adw.Dialog):
@@ -36,8 +39,9 @@ class FinderDialog(Adw.Dialog):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, margin_top=12, margin_bottom=24,
                       margin_start=24, margin_end=24)
         intro = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER, css_classes=["dim-label"],
-                          label="Los audífonos están sonando. Mueve la laptop (o camina con ella): la barra se "
-                                "llena al acercarte. Mide la señal del audífono que está conectado.")
+                          label="Los audífonos están sonando. Camina con la laptop: la barra baja al alejarte. "
+                                "De cerca la señal se ve llena en todos lados (Bluetooth solo distingue cuando se "
+                                "debilita), así que úsala para saber hacia dónde ir y luego guíate por el sonido.")
         self.big = Gtk.Label(label="Midiendo…", css_classes=["title-1"])
         self.bar = Gtk.LevelBar(min_value=0, max_value=1, height_request=14)
         self.bar.update_property([Gtk.AccessibleProperty.LABEL], ["Intensidad de la señal"])
@@ -70,12 +74,14 @@ class FinderDialog(Adw.Dialog):
             return False
         self.samples = (self.samples + [v])[-4:]
         avg = sum(self.samples) / len(self.samples)
-        self.bar.set_value(max(0.0, min(1.0, (avg - WEAK) / (STRONG - WEAK))))
-        self.big.set_label(_words(avg))
+        frac, word = _scale(avg)
+        self.bar.set_value(frac)
+        self.big.set_label(word)
         if len(self.samples) >= 4:
             delta = (self.samples[-1] + self.samples[-2]) / 2 - (self.samples[0] + self.samples[1]) / 2
-            self.trend.set_label("🔥 Más cerca" if delta >= 3 else "❄ Más lejos" if delta <= -3 else "Igual")
-        self.detail.set_label(f"{avg:.0f} dBm")
+            thr = 1.5 if avg > -30 else 3
+            self.trend.set_label("🔥 Más cerca" if delta >= thr else "❄ Más lejos" if delta <= -thr else "Igual")
+        self.detail.set_label(f"señal {avg:+.0f} dB respecto al rango óptimo" if avg > -30 else f"{avg:.0f} dBm")
         return False
 
     def _on_closed(self, *_):

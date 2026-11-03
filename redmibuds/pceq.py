@@ -195,7 +195,7 @@ class PcEq:
                 self._stop()
                 return
             time.sleep(0.2)
-        if was_default or audio.default_sink() in ("", target):
+        if was_default or audio.default_sink() in ("", target) or audio.configured_sink() in (name, target):
             audio.set_default_sink(name)
         log("ecualizador de la PC: activo sobre", target)
 

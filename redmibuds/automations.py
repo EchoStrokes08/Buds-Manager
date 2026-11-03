@@ -109,6 +109,11 @@ class Automations:
         cfg = load_config()
         if st is None:
             self.wear = None
+            try:
+                if cfg["auto_output"]:
+                    self._output_on_disconnect(mac)
+            except Exception as e:  # noqa: BLE001
+                log("cambio de salida falló:", e)
             if cfg["case_reminder"]:
                 self._left_out_on_disconnect(mac)
             return
@@ -214,28 +219,55 @@ class Automations:
 
     def _output(self, mac, prev, wear, cfg):
         from . import audio
-        if not prev or not wear or not cfg["auto_output"]:
+        if not wear or not cfg["auto_output"]:
             return
-        before, now = _in_ear(prev), _in_ear(wear)
+        now = _in_ear(wear)
+        moved = self.output_moved or _load_moved()
+        if prev is None:
+            # first reading after (re)starting the daemon: finish a pending return we may have forgotten
+            if moved and now > 0:
+                self._return_output(mac, moved)
+            return
+        before = _in_ear(prev)
         if before > 0 and now == 0:
             sink = audio.default_sink()
             pc = audio.pc_sink()
             if pc and audio.is_buds_node(sink, mac):
                 audio.set_default_sink(pc)
                 self.output_moved = (sink, pc)
+                _save_moved(self.output_moved)
                 log("salida: audífonos fuera →", pc)
                 notify("Audio en las bocinas de la PC", "Vuelve a los audífonos al ponértelos")
-        elif before == 0 and now > 0 and self.output_moved:
-            buds, pc = self.output_moved
-            self.output_moved = None
-            if audio.default_sink() != pc:
-                return                  # the user picked another output meanwhile; leave it
-            sinks = {s["name"] for s in audio._json("list", "sinks")}
-            target = buds if buds in sinks else audio.buds_sink(mac)   # back to the EQ output if it still runs
-            if not target:
-                return
+        elif before == 0 and now > 0 and moved:
+            self._return_output(mac, moved)
+
+    def _return_output(self, mac, moved):
+        from . import audio
+        self.output_moved = None
+        _save_moved(None)
+        buds, pc = moved
+        if audio.default_sink() != pc:
+            return                      # the user picked another output meanwhile; leave it
+        target = _buds_output(mac, buds)
+        if target:
             audio.set_default_sink(target)
             log("salida: audífonos puestos →", target)
+
+    def _output_on_disconnect(self, mac):
+        """The earbuds left while the audio sat on the speakers (e.g. put away in the case): make them the
+        preferred output again, so the next connection plays through them instead of the speakers."""
+        from . import audio
+        moved = self.output_moved or _load_moved()
+        if not moved:
+            return
+        self.output_moved = None
+        _save_moved(None)
+        buds, pc = moved
+        if audio.default_sink() not in (pc, ""):
+            return
+        real = buds if buds.startswith("bluez_") else "bluez_output." + mac.replace(":", "_") + ".1"
+        audio.set_configured_sink(real)
+        log("salida: desconectados; la próxima conexión vuelve a", real)
 
     # ---- battery ----
 
@@ -276,3 +308,40 @@ class Automations:
 
 def _subject(sides):
     return "Los dos audífonos" if len(sides) == 2 else f"El audífono {SIDE_NAME[sides[0]]}"
+
+
+MOVED_PATH = os.path.join(os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state")), "redmi-buds",
+                          "output-moved.json")
+
+
+def _save_moved(moved):
+    try:
+        if moved:
+            os.makedirs(os.path.dirname(MOVED_PATH), exist_ok=True)
+            with open(MOVED_PATH, "w") as f:
+                json.dump(list(moved), f)
+        elif os.path.exists(MOVED_PATH):
+            os.remove(MOVED_PATH)
+    except OSError:
+        pass
+
+
+def _load_moved():
+    try:
+        with open(MOVED_PATH) as f:
+            buds, pc = json.load(f)
+            return buds, pc
+    except (OSError, ValueError, TypeError):
+        return None
+
+
+def _buds_output(mac, preferred):
+    """Where to send the audio back: the PC equalizer's output if it runs, else the earbuds themselves."""
+    from . import audio
+    sinks = [x["name"] for x in audio._json("list", "sinks")]
+    eq = [n for n in sinks if n.startswith("buds_pceq.") and audio.is_buds_node(n, mac)]
+    if eq:
+        return eq[0]
+    if preferred in sinks:
+        return preferred
+    return audio.buds_sink(mac)

@@ -174,6 +174,25 @@ def set_default_sink(name):
     _pactl("set-default-sink", name)
 
 
+def configured_sink():
+    """WirePlumber's remembered default output (may name a device that isn't present)."""
+    import json
+    r = subprocess.run(["pw-metadata", "-n", "default", "0", "default.configured.audio.sink"],
+                       capture_output=True, text=True, timeout=5)
+    m = re.search(r"value:'(\{.*?\})'", r.stdout)
+    try:
+        return json.loads(m.group(1)).get("name", "") if m else ""
+    except ValueError:
+        return ""
+
+
+def set_configured_sink(name):
+    """Sets WirePlumber's remembered (configured) default output even if that device isn't present now."""
+    import json
+    subprocess.run(["pw-metadata", "-n", "default", "0", "default.configured.audio.sink",
+                    json.dumps({"name": name}), "Spa:String:JSON"], capture_output=True, timeout=5)
+
+
 def set_default_source(name):
     _pactl("set-default-source", name)
 
