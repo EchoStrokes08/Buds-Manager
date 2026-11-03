@@ -45,7 +45,9 @@ usuario de systemd y el lanzador, y la regla udev de los gestos (con `sudo`).
 buds-manager
 ```
 
-También aparece como **Buds Manager** en el lanzador de aplicaciones. GTK4 + libadwaita, cinco pestañas:
+También aparece como **Buds Manager** en el lanzador de aplicaciones. GTK4 + libadwaita con el tema **Ayu** oscuro (o el del sistema, desde el menú) e ilustraciones de los
+audífonos y el estuche en su color (negro obsidiana, blanco nube o azul glaciar; menú → *Color de los
+audífonos*). Cinco pestañas:
 
 - **Sonido**: batería de cada auricular y del estuche, modo (apagado / cancelación / transparencia),
   intensidad de la cancelación o tipo de transparencia, ANC adaptativo, ANC personalizado, sonido adaptativo.
@@ -155,15 +157,22 @@ Necesita el servicio activo (`buds hold on`) y la regla udev para leer `/dev/inp
 - **Bandeja** (`buds-tray`, servicio `buds-tray.service` ligado a la sesión gráfica): ícono en cualquier
   bandeja StatusNotifierItem (Waybar, KDE…). Clic: abre Buds Manager. Menú: batería, modo de ruido,
   ecualizador y temporizador. Tooltip con modo, batería y tiempo restante.
-- **Módulo propio para Waybar** (opcional), con `buds waybar` (JSON) y la señal 8 para refrescarlo:
+- **Waybar** (opcional): ícono y porcentaje de cada audífono y del estuche. `buds waybar --part
+  left|right|case` da el porcentaje (JSON) y `--icon` la ruta del ícono (vacía si no hay dato, así se oculta);
+  la señal 8 los refresca al instante. Ejemplo para un audífono (repite con `right` y `case`):
 
   ```jsonc
-  "custom/buds": {
-      "exec": "~/.local/bin/buds waybar", "return-type": "json", "interval": 120, "signal": 8,
-      "on-click": "~/.local/bin/buds mode next --notify",
-      "on-click-middle": "~/.local/bin/buds-manager"
-  }
+  "group/buds": { "orientation": "horizontal",
+      "modules": ["image#buds-left", "custom/buds-left", "image#buds-right", "custom/buds-right",
+                  "image#buds-case", "custom/buds-case"] },
+  "image#buds-left": { "exec": "~/.local/bin/buds waybar --part left --icon", "size": 22,
+                       "interval": 120, "signal": 8, "tooltip": false },
+  "custom/buds-left": { "exec": "~/.local/bin/buds waybar --part left", "return-type": "json",
+                        "interval": 120, "signal": 8, "on-click": "~/.local/bin/buds mode next --notify",
+                        "on-click-middle": "~/.local/bin/buds-manager" }
   ```
+
+  Clases CSS de los porcentajes: `anc`, `transparency`, `charging`, `low`, `critical`.
 - **Atajos de teclado** (ejemplo para Hyprland): `bind = SUPER, B, exec, ~/.local/bin/buds mode next --notify`.
 
 ## Más funciones del servicio

@@ -27,7 +27,9 @@ DEFAULTS = {
     "exposure": True,          # listening-dose estimate and alerts (see exposure.py)
     "ref_spl": 95.0,           # dB that typical music reaches at 100 % volume (exposure calibration)
     "pc_eq": {"enabled": False, "bands": [0] * 10, "balance": 0},   # see pceq.py
-    "pc_eq_presets": {},       # named PC EQ curves: {name: {"bands": [...], "balance": n}}
+    "pc_eq_presets": {},
+    "theme": "ayu",            # Buds Manager look: "ayu" or "system"
+    "buds_color": "black",     # illustrations: black (obsidian) | white (cloud) | blue (glacier)       # named PC EQ curves: {name: {"bands": [...], "balance": n}}
     "call_denoise": True,      # RNNoise on the earbuds' mic during calls (see denoise.py)
     "call_apps": [],           # extra app names treated as call apps
     "app_profiles": [],        # per-app noise mode / EQ (see profiles.py)

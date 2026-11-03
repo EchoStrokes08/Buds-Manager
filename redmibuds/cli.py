@@ -265,8 +265,75 @@ def cmd_restore(client, args):
     refresh_waybar()
 
 
+WAYBAR_ICON_DIR = os.path.join(STATE_DIR, "waybar")
+PART_LABEL = {"left": "Izquierdo", "right": "Derecho", "case": "Estuche"}
+
+
+def make_waybar_icons(px=48):
+    """Renders left / right / case icons (in the earbuds' color) for Waybar's image modules."""
+    from .art import bar_icon
+    os.makedirs(WAYBAR_ICON_DIR, exist_ok=True)
+    ear = bar_icon("earbud", px)
+    ear.savev(os.path.join(WAYBAR_ICON_DIR, "left.png"), "png", [], [])
+    ear.flip(True).savev(os.path.join(WAYBAR_ICON_DIR, "right.png"), "png", [], [])
+    bar_icon("case", px).savev(os.path.join(WAYBAR_ICON_DIR, "case.png"), "png", [], [])
+    refresh_waybar()
+
+
+def _battery_snapshot():
+    """(battery dict or None, mode or None, status text) without ever raising."""
+    try:
+        ds = remote.call({"op": "state"}, timeout=3)
+    except (OSError, ValueError, p.BudsError):
+        ds = None
+    if ds is not None:
+        st = ds.get("state")
+        if st:
+            return st.get("battery") or {}, st.get("mode"), MODE_LABEL.get(st.get("mode"), "")
+        if ds.get("reason") == "busy":
+            return ds.get("battery") or {}, None, ds.get("reason_text") or ""
+        return None, None, ds.get("reason_text") or "Desconectados"
+    mac = find_mac()
+    if not mac:
+        return None, None, "Desconectados"
+    try:
+        with p.Client(mac) as client:
+            st = d.read_state(client)
+        return st.get("battery") or {}, st.get("mode"), MODE_LABEL.get(st.get("mode"), "")
+    except Exception as e:  # noqa: BLE001
+        return None, None, str(e)
+
+
+def cmd_waybar_part(part, icon=False):
+    b, mode, status = _battery_snapshot()
+    x = (b or {}).get(part)
+    if icon:                      # image module: path, or nothing to hide the icon
+        path = os.path.join(WAYBAR_ICON_DIR, f"{part}.png")
+        if x and not os.path.exists(path):
+            make_waybar_icons()
+        print(path if x else "")
+        return
+    if not x:
+        print(json.dumps({"text": "", "class": "empty"}))
+        return
+    classes = [part, mode or "busy"]
+    if x["charging"]:
+        classes.append("charging")
+    elif x["level"] <= 10:
+        classes.append("critical")
+    elif x["level"] <= 20:
+        classes.append("low")
+    tip = (f"REDMI Buds — {status}\n" +
+           "   ".join(f"{PART_LABEL[k]} {fmt_batt(b.get(k))}" for k in ("left", "right", "case")) +
+           "\nClic: cambiar modo · Clic derecho: ANC/apagado · Clic central: Buds Manager")
+    print(json.dumps({"text": f"{x['level']}%", "tooltip": tip, "class": classes,
+                      "percentage": x["level"]}, ensure_ascii=False))
+
+
 def cmd_waybar(args):
     """Never fails: prints a JSON line for Waybar's custom module."""
+    if getattr(args, "part", None):
+        return cmd_waybar_part(args.part, icon=args.icon)
     ds = None
     try:
         ds = remote.call({"op": "state"}, timeout=3)
@@ -507,7 +574,12 @@ def build_parser():
     s.add_argument("file", nargs="?")
     s.set_defaults(fn=cmd_restore)
 
-    sub.add_parser("waybar", help="salida JSON para Waybar").set_defaults(fn=None)
+    s = sub.add_parser("waybar", help="salida JSON para Waybar (--part left|right|case: un porcentaje; "
+                                      "--icon: ruta del ícono para un módulo image)")
+    s.add_argument("--part", choices=["left", "right", "case"])
+    s.add_argument("--icon", action="store_true")
+    s.set_defaults(fn=None)
+    sub.add_parser("waybar-icons", help="regenera los íconos de Waybar (al cambiar el color)").set_defaults(fn=None)
     sub.add_parser("daemon", help="servicio que mantiene el control en esta PC (lo usa systemd)").set_defaults(fn=None)
     s = sub.add_parser("hold", help="mantener el control de los audífonos en esta PC: on | off | status")
     s.add_argument("state", nargs="?", default="status", choices=["on", "off", "status"])
@@ -551,6 +623,8 @@ def main(argv=None):
         return cmd_mic(args)
     if args.cmd in ("atajos", "shortcuts"):
         return cmd_atajos(args)
+    if args.cmd == "waybar-icons":
+        return make_waybar_icons()
     if args.cmd == "waybar":
         if args.mac:
             os.environ["REDMI_BUDS_MAC"] = args.mac

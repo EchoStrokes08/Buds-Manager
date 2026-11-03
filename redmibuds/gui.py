@@ -23,6 +23,7 @@ from . import gestures as gest  # noqa: E402
 from . import automations as autom  # noqa: E402
 from .calls import MODES as MIC_MODES  # noqa: E402
 from . import profiles as appprof  # noqa: E402
+from . import theme  # noqa: E402
 from .cli import hold_enabled, set_hold  # noqa: E402
 from .cli import INITIAL_BACKUP, STATE_DIR, find_mac, refresh_waybar, save_backup, _freq_label  # noqa: E402
 
@@ -54,21 +55,11 @@ EQ_PRESETS_CURVES = {  # quick shapes for the custom curve
 }
 
 CSS = """
-.battery-card { padding: 18px 12px; }
-.battery-level { font-size: 26px; font-weight: 800; font-feature-settings: "tnum"; }
-.battery-name { font-size: 13px; opacity: .7; }
 .eq-band-label { font-size: 11px; opacity: .7; font-feature-settings: "tnum"; }
 .pceq-scale value { font-size: 10px; font-feature-settings: "tnum"; min-width: 0; }
 .pceq-scale { padding-left: 0; padding-right: 0; }
-.hero-title { font-size: 20px; font-weight: 800; }
-.mode-toggles { padding: 4px; }
-.mode-toggles button { min-height: 52px; }
-.wear-label { font-size: 11px; opacity: .55; }
 row.bt-connected .title { font-weight: 700; }
 /* narrow layout (Adw.Breakpoint below 520sp) */
-window.narrow .battery-card { padding: 12px 4px; }
-window.narrow .battery-level { font-size: 21px; }
-window.narrow .mode-toggles button { min-height: 44px; }
 """
 
 
@@ -157,44 +148,6 @@ def watch_daemon(on_change):
             except (OSError, ValueError, p.BudsError):
                 time.sleep(5)
     threading.Thread(target=loop, daemon=True).start()
-
-
-class BatteryCard(Gtk.Box):
-    def __init__(self, name, icon):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6, hexpand=True)
-        self.add_css_class("card")
-        self.add_css_class("battery-card")
-        img = Gtk.Image.new_from_icon_name(icon)
-        img.set_pixel_size(28)
-        self.append(img)
-        self.level = Gtk.Label(label="—")
-        self.level.add_css_class("battery-level")
-        self.append(self.level)
-        self.bar = Gtk.LevelBar(min_value=0, max_value=100)
-        self.bar.add_offset_value("low", 20)
-        self.bar.add_offset_value("high", 50)
-        self.bar.add_offset_value("full", 100)
-        self.append(self.bar)
-        lbl = Gtk.Label(label=name)
-        lbl.add_css_class("battery-name")
-        self.append(lbl)
-        self.wear = Gtk.Label(label="", visible=False)
-        self.wear.add_css_class("wear-label")
-        self.append(self.wear)
-
-    def set_wear(self, w):
-        self.wear.set_visible(bool(w))
-        self.wear.set_label(WEAR_LABEL.get(w, "") if w else "")
-
-    def update(self, b):
-        if not b:
-            self.level.set_label("—")
-            self.bar.set_value(0)
-            self.set_opacity(0.5)
-            return
-        self.set_opacity(1)
-        self.level.set_label(f"{b['level']}%" + (" ⚡" if b["charging"] else ""))
-        self.bar.set_value(b["level"])
 
 
 class DiscHeader(Gtk.Box):
@@ -425,6 +378,8 @@ class Window(Adw.ApplicationWindow):
         self.eq_frame.set_spacing(0 if narrow else 2)
         self.eq_frame.set_margin_start(0 if narrow else 6)
         self.eq_frame.set_margin_end(0 if narrow else 6)
+        for card in getattr(self, "batt", {}).values():
+            card.art.set_size_request(*(2 * (84 if narrow else 112,)))
         if getattr(self, "pceq_frame", None):
             self.pceq_frame.set_spacing(0 if narrow else 2)
             self.pceq_frame.set_margin_start(0 if narrow else 6)
@@ -587,23 +542,31 @@ class Window(Adw.ApplicationWindow):
     def _build_sound(self):
         box = self._box()
 
-        hero = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        self.title_label = Gtk.Label(label="REDMI Buds 8 Pro", xalign=0)
-        self.title_label.add_css_class("hero-title")
-        hero.append(self.title_label)
-        cards = Gtk.Box(spacing=12, homogeneous=True)
-        self.batt = {"left": BatteryCard("Izquierdo", "audio-headphones-symbolic"),
-                     "right": BatteryCard("Derecho", "audio-headphones-symbolic"),
-                     "case": BatteryCard("Estuche", "battery-symbolic")}
+        hero = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16, css_classes=["hero-card"])
+        head = Gtk.Box(spacing=8, margin_start=10, margin_end=10)
+        titles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
+        self.title_label = Gtk.Label(label="REDMI Buds 8 Pro", xalign=0, css_classes=["hero-title"],
+                                     ellipsize=3)
+        self.hero_sub = Gtk.Label(label="", xalign=0, css_classes=["hero-sub"])
+        titles.append(self.title_label)
+        titles.append(self.hero_sub)
+        head.append(titles)
+        self.status_pill = theme.StatusPill()
+        self.status_pill.set_visible(False)
+        head.append(self.status_pill)
+        hero.append(head)
+        cards = Gtk.Box(spacing=4, homogeneous=True)
+        self.batt = {"left": theme.BatteryCard("Izquierdo", WEAR_LABEL, "left"),
+                     "right": theme.BatteryCard("Derecho", WEAR_LABEL, "right"),
+                     "case": theme.BatteryCard("Estuche", WEAR_LABEL, "case")}
         for c in self.batt.values():
             cards.append(c)
         hero.append(cards)
         box.append(hero)
 
         g = Adw.PreferencesGroup(title="Control de ruido")
-        self.mode_group = self._toggle_group([(k, l) for k, l, _ in MODE_INFO],
-                                             lambda m: self._set_mode(m))
-        self.mode_group.add_css_class("mode-toggles")
+        self.mode_group = theme.ModeTiles([(k, l) for k, l, _ in MODE_INFO])
+        self.mode_group.connect("changed", lambda _w, m: None if self._updating else self._set_mode(m))
         g.add(self.mode_group)
         box.append(g)
         self.commute_row = self._combo("Viaje inmersivo", COMMUTE_LABELS, lambda v: self.run(
@@ -1355,6 +1318,11 @@ class Window(Adw.ApplicationWindow):
         menu.append("Actualizar", "win.refresh")
         menu.append("Guardar configuración", "win.backup")
         menu.append("Restaurar original", "win.restore-initial")
+        menu.append("Tema Ayu (oscuro)", "app.ayu-theme")
+        colors = Gio.Menu()
+        for key, pal in theme.BUDS_COLORS.items():
+            colors.append(pal["label"], f"app.buds-color::{key}")
+        menu.append_submenu("Color de los audífonos", colors)
         menu.append("Acerca de Buds Manager", "win.about")
         return Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu, primary=True)
 
@@ -1478,6 +1446,9 @@ class Window(Adw.ApplicationWindow):
                 self.profile_row.pairs = profs
                 self.profile_row.set_model(_string_list(profs))
             self._select(self.profile_row, active)
+            label = dict(profs).get(active, "")
+            short = label.split("·")[-1].strip() if audio.is_music(active) else ("Llamada" if active else "")
+            self.status_pill.set_text(short, ok=audio.is_music(active))
             self._select(self.ldac_row, audio.ldac_quality(self.mac))
             self.ldac_row.set_visible(active == "a2dp-sink" or "ldac" in (active or ""))
         finally:
@@ -1691,6 +1662,13 @@ class Window(Adw.ApplicationWindow):
 
         name = _device_name(self.mac) or "REDMI Buds"
         self.title_label.set_label(name)
+        try:
+            from . import battlog
+            est = battlog.estimate()
+        except Exception:  # noqa: BLE001
+            est = None
+        self.hero_sub.set_label(f"≈ {battlog.fmt_hours(est['hours'])} de batería" if est else
+                                "Conectados a esta PC")
         info = {"name": name, "mac": self.mac, "firmware": st.get("firmware"), "serial": st.get("serial"),
                 "platform": st.get("platform")}
         for k, row in self.info_rows.items():
@@ -1733,6 +1711,37 @@ class App(Adw.Application):
         from gi.repository import Gdk
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css,
                                                   Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        from .automations import load_config, save_config
+        theme.apply(load_config().get("theme", "ayu"))
+        ayu = Gio.SimpleAction.new_stateful("ayu-theme", None, GLib.Variant("b", theme.current() == "ayu"))
+
+        def toggle_theme(action, _):
+            on = not action.get_state().get_boolean()
+            action.set_state(GLib.Variant("b", on))
+            theme.apply("ayu" if on else "system")
+            cfg = load_config()
+            cfg["theme"] = "ayu" if on else "system"
+            save_config(cfg)
+            win = self.props.active_window
+            if win:
+                win.queue_draw()
+        ayu.connect("activate", toggle_theme)
+        self.add_action(ayu)
+        color = Gio.SimpleAction.new_stateful("buds-color", GLib.VariantType.new("s"),
+                                              GLib.Variant("s", theme.buds_color()))
+
+        def set_color(action, value):
+            action.set_state(value)
+            cfg = load_config()
+            cfg["buds_color"] = value.get_string()
+            save_config(cfg)
+            win = self.props.active_window
+            for card in getattr(win, "batt", {}).values():
+                card.art.queue_draw()
+            from .cli import make_waybar_icons
+            make_waybar_icons()
+        color.connect("activate", set_color)
+        self.add_action(color)
         quit_ = Gio.SimpleAction(name="quit")
         quit_.connect("activate", lambda *_: self.quit())
         self.add_action(quit_)

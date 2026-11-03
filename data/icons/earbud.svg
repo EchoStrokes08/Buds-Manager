@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- REDMI Buds 8 Pro, left earbud (front view): rounded head, grey silicone tip, wide angled stem with
+       a mirror-chrome strip along its outer face. Drawn from public photos; the app mirrors it for the right. -->
+  <defs>
+    <linearGradient id="matte" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="@hi@"/>
+      <stop offset="0.5" stop-color="@mid@"/>
+      <stop offset="1" stop-color="@lo@"/>
+    </linearGradient>
+    <radialGradient id="head" cx="0.35" cy="0.30" r="0.85">
+      <stop offset="0" stop-color="@hi@"/>
+      <stop offset="0.6" stop-color="@mid@"/>
+      <stop offset="1" stop-color="@lo@"/>
+    </radialGradient>
+    <radialGradient id="tip" cx="0.38" cy="0.32" r="0.8">
+      <stop offset="0" stop-color="@tiphi@"/>
+      <stop offset="0.7" stop-color="@tipmid@"/>
+      <stop offset="1" stop-color="@tiplo@"/>
+    </radialGradient>
+    <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="@ch1@"/>
+      <stop offset="0.18" stop-color="@ch2@"/>
+      <stop offset="0.34" stop-color="@ch3@"/>
+      <stop offset="0.55" stop-color="@ch4@"/>
+      <stop offset="0.75" stop-color="@ch5@"/>
+      <stop offset="1" stop-color="@ch6@"/>
+    </linearGradient>
+  </defs>
+  <!-- colors: @tokens@ are filled per official color (theme.BUDS_COLORS) -->
+  <!-- contact shadow -->
+  <ellipse cx="74" cy="119" rx="24" ry="4" fill="#000" opacity="0.3"/>
+  <g transform="rotate(-24 52 44)">
+    <!-- silicone ear tip (behind the head, towards the ear) -->
+    <ellipse cx="30" cy="40" rx="15" ry="16" fill="url(#tip)"/>
+    <ellipse cx="25" cy="40" rx="5" ry="6.5" fill="#4b5157" opacity="0.8"/>
+    <ellipse cx="30" cy="33" rx="9" ry="3.2" fill="#fff" opacity="0.25"/>
+    <!-- head -->
+    <path d="M 36 40 C 36 25 47 16 60 16 C 74 16 82 27 81 41 C 80 53 71 60 60 60 C 46 60 36 53 36 40 Z"
+          fill="url(#head)" stroke="@edge@" stroke-opacity="@edgea@" stroke-width="1"/>
+    <!-- seam ring between tip and head -->
+    <path d="M 40 29 C 37 35 37 45 40 51" fill="none" stroke="#5a6067" stroke-opacity="0.6" stroke-width="2"/>
+    <!-- head highlight -->
+    <path d="M 47 23 C 52 19 59 18 65 19" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+    <!-- stem -->
+    <rect x="49" y="40" width="24" height="76" rx="12" fill="url(#matte)" stroke="@edge@" stroke-opacity="@edgea@" stroke-width="1"/>
+    <!-- mirror-chrome strip -->
+    <rect x="54" y="44" width="14" height="68" rx="7" fill="url(#chrome)"/>
+    <rect x="54" y="44" width="14" height="68" rx="7" fill="none" stroke="#2b3035" stroke-opacity="0.55" stroke-width="0.8"/>
+    <path d="M 58 50 L 58 104" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity="0.85"/>
+    <!-- logo hint near the bottom of the strip -->
+    <rect x="59.5" y="96" width="3" height="10" rx="1.2" fill="#2b3035" opacity="0.45"/>
+    <!-- microphone at the stem tip -->
+    <rect x="56" y="113" width="10" height="2.4" rx="1.2" fill="#30353a"/>
+  </g>
+</svg>

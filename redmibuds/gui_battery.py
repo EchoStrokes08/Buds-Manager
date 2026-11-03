@@ -19,10 +19,15 @@ def _dark():
     return Adw.StyleManager.get_default().get_dark()
 
 
+# Ayu theme: the rice's blue/orange stepped into the dark band (validated on #141c23 — all checks pass)
+SERIES_AYU = {"left": "#2f97cc", "right": "#cc7a0a"}
+
+
 def _series_rgba(side):
+    from . import theme
     _, light, dark = SERIES[side]
     c = Gdk.RGBA()
-    c.parse(dark if _dark() else light)
+    c.parse(SERIES_AYU[side] if theme.current() == "ayu" else (dark if _dark() else light))
     return c
 
 
@@ -202,7 +207,8 @@ class BatteryChart(Gtk.Widget):
         bx = self.hover_x + 10 if self.hover_x + 10 + bw < w else self.hover_x - 10 - bw
         by = self.PAD_T + 2
         bg = Gdk.RGBA()
-        bg.parse("#2e2e32" if _dark() else "#ffffff")
+        from . import theme
+        bg.parse("#1a242d" if theme.current() == "ayu" else "#2e2e32" if _dark() else "#ffffff")
         snapshot.append_color(_ink(fg, 0.15), _rect(bx - 1, by - 1, bw + 2, bh + 2))
         snapshot.append_color(bg, _rect(bx, by, bw, bh))
         for i, (side, txt) in enumerate(lines):
