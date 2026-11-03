@@ -737,6 +737,8 @@ class Window(Adw.ApplicationWindow):
                 parts.append(modes.get(pr["mode"], pr["mode"]))
             if pr.get("eq"):
                 parts.append("EQ " + eqs.get(pr["eq"], pr["eq"]))
+            if pr.get("pc_eq"):
+                parts.append("EQ PC " + ("apagado" if pr["pc_eq"] == "off" else f"«{pr['pc_eq']}»"))
             r = Adw.ActionRow(title=GLib.markup_escape_text(pr.get("app", "?")), subtitle=" · ".join(parts),
                               activatable=True)
             r.connect("activated", lambda _r, i=i: self._edit_profile(i))
@@ -801,6 +803,14 @@ class Window(Adw.ApplicationWindow):
         eq = self._plain_combo("Ecualizador", [(None, "Sin cambiar")] + EQ_LABELS, pr.get("eq"))
         g2.add(mode)
         g2.add(eq)
+        from . import pceq
+        pc_pairs = [(None, "Sin cambiar"), ("off", "Apagado")] + [(n, n) for n in pceq.presets()]
+        if pr.get("pc_eq") and pr["pc_eq"] not in dict(pc_pairs):
+            pc_pairs.append((pr["pc_eq"], f"{pr['pc_eq']} (borrada)"))
+        pc = self._plain_combo("Ecualizador de la PC", pc_pairs, pr.get("pc_eq"))
+        if len(pc_pairs) == 2:
+            pc.set_subtitle("Guarda curvas en Ecualizador → Ecualizador de la PC")
+        g2.add(pc)
         page.add(g2)
         tv.set_content(page)
         dlg.set_child(tv)
@@ -811,8 +821,9 @@ class Window(Adw.ApplicationWindow):
                 self.toast("Escribe o elige una app")
                 return
             new = {"app": app, "when": when.pairs[when.get_selected()][0],
-                   "mode": mode.pairs[mode.get_selected()][0], "eq": eq.pairs[eq.get_selected()][0]}
-            if not new["mode"] and not new["eq"]:
+                   "mode": mode.pairs[mode.get_selected()][0], "eq": eq.pairs[eq.get_selected()][0],
+                   "pc_eq": pc.pairs[pc.get_selected()][0]}
+            if not new["mode"] and not new["eq"] and not new["pc_eq"]:
                 self.toast("Elige al menos qué cambiar")
                 return
             self._save_profile(index, new)
@@ -913,6 +924,18 @@ class Window(Adw.ApplicationWindow):
         self._updating = was
         lb = Gtk.ListBox(css_classes=["boxed-list"], selection_mode=Gtk.SelectionMode.NONE)
         lb.append(self.pceq_switch)
+        self.pceq_curve_row = Adw.ComboRow(title="Curva", model=Gtk.StringList.new([]))
+        self.pceq_curve_row.pairs = []
+        self.pceq_curve_row.connect("notify::selected", self._pc_eq_pick)
+        save_btn = Gtk.Button(icon_name="document-save-symbolic", tooltip_text="Guardar curva actual con un nombre",
+                              valign=Gtk.Align.CENTER, css_classes=["flat"])
+        save_btn.connect("clicked", lambda *_: self._pc_eq_save_as())
+        self.pceq_del_btn = Gtk.Button(icon_name="user-trash-symbolic", tooltip_text="Eliminar esta curva",
+                                       valign=Gtk.Align.CENTER, css_classes=["flat"])
+        self.pceq_del_btn.connect("clicked", lambda *_: self._pc_eq_delete())
+        self.pceq_curve_row.add_suffix(save_btn)
+        self.pceq_curve_row.add_suffix(self.pceq_del_btn)
+        lb.append(self.pceq_curve_row)
         g.add(lb)
 
         frame = Gtk.Box(spacing=2, homogeneous=True, margin_top=12, margin_start=6, margin_end=6)
@@ -957,7 +980,80 @@ class Window(Adw.ApplicationWindow):
         inner.append(Gtk.Label(label="Der.", css_classes=["caption"]))
         bal_box.append(inner)
         g.add(bal_box)
+        self._pc_eq_sync_curves()
         return g
+
+    def _pc_eq_sync_curves(self):
+        from . import pceq
+        names = list(pceq.presets())
+        cur = pceq.current_value(self._pc_eq_cfg_preview())
+        pairs = [(n, n) for n in names]
+        if cur not in names:
+            pairs = [("@", "Sin guardar")] + pairs
+        was, self._updating = self._updating, True
+        self.pceq_curve_row.pairs = pairs
+        self.pceq_curve_row.set_model(_string_list(pairs))
+        self._select(self.pceq_curve_row, cur if cur in names else "@")
+        self._updating = was
+        self.pceq_del_btn.set_sensitive(cur in names)
+
+    def _pc_eq_cfg_preview(self):
+        """Config as the sliders show it (enabled forced on, so the curve is compared even when off)."""
+        cfg = autom.load_config()
+        cfg["pc_eq"] = {"enabled": True, "bands": [int(round(sc.get_value())) for sc in self.pceq_sliders],
+                        "balance": int(round(self.pceq_balance.get_value()))}
+        return cfg
+
+    def _pc_eq_pick(self, row, _):
+        if self._updating or not row.pairs or row.get_selected() >= len(row.pairs):
+            return
+        name = row.pairs[row.get_selected()][0]
+        if name == "@":
+            return
+        from . import pceq
+        p_ = pceq.presets().get(name)
+        if not p_:
+            return
+        self._updating = True
+        for sc, v in zip(self.pceq_sliders, p_["bands"]):
+            sc.set_value(v)
+        self.pceq_balance.set_value(p_["balance"])
+        self._updating = False
+        self._pc_eq_save()
+
+    def _pc_eq_save_as(self):
+        dlg = Adw.AlertDialog(heading="Guardar curva", body="Ponle un nombre para usarla en los perfiles por app.")
+        entry = Gtk.Entry(placeholder_text="Por ejemplo: Podcasts", activates_default=True)
+        dlg.set_extra_child(entry)
+        dlg.add_response("cancel", "Cancelar")
+        dlg.add_response("save", "Guardar")
+        dlg.set_response_appearance("save", Adw.ResponseAppearance.SUGGESTED)
+        dlg.set_default_response("save")
+
+        def done(_d, resp):
+            name = entry.get_text().strip()
+            if resp != "save" or not name:
+                return
+            cfg = autom.load_config()
+            pv = self._pc_eq_cfg_preview()["pc_eq"]
+            cfg.setdefault("pc_eq_presets", {})[name] = {"bands": pv["bands"], "balance": pv["balance"]}
+            autom.save_config(cfg)
+            self._pc_eq_sync_curves()
+            self.toast(f"Curva «{name}» guardada")
+        dlg.connect("response", done)
+        dlg.present(self)
+
+    def _pc_eq_delete(self):
+        row = self.pceq_curve_row
+        if not row.pairs or row.get_selected() >= len(row.pairs):
+            return
+        name = row.pairs[row.get_selected()][0]
+        cfg = autom.load_config()
+        if name in (cfg.get("pc_eq_presets") or {}):
+            del cfg["pc_eq_presets"][name]
+            autom.save_config(cfg)
+            self.toast(f"Curva «{name}» eliminada")
+        self._pc_eq_sync_curves()
 
     def _pc_eq_reset(self):
         self._updating = True
@@ -985,6 +1081,7 @@ class Window(Adw.ApplicationWindow):
         except OSError as e:
             self.toast(f"⚠ {e}", 4)
             return False
+        self._pc_eq_sync_curves()
 
         def go():
             try:

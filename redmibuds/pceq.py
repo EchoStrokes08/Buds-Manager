@@ -238,3 +238,45 @@ class PcEq:
                 log("ecualizador de la PC: no se pudo cambiar en vivo, reinicio el filtro")
                 self._stop()
                 self._kick.set()
+
+
+# ---- named curves (config "pc_eq_presets": {name: {"bands": [...], "balance": n}}) ----
+
+def presets(cfg=None):
+    out = {}
+    for name, p in ((cfg or load_config()).get("pc_eq_presets") or {}).items():
+        s = settings({"pc_eq": {"bands": p.get("bands"), "balance": p.get("balance", 0)}})
+        out[name] = {"bands": s["bands"], "balance": s["balance"]}
+    return out
+
+
+def current_value(cfg=None):
+    """The PC EQ as one comparable value for per-app profiles: "off", a preset name, or "@<bands,balance>"
+    for a curve that isn't saved under a name."""
+    cfg = cfg or load_config()
+    s = settings(cfg)
+    if not s["enabled"]:
+        return "off"
+    for name, p in presets(cfg).items():
+        if [round(b) for b in p["bands"]] == [round(b) for b in s["bands"]] and p["balance"] == s["balance"]:
+            return name
+    return "@" + json.dumps({"bands": [round(b) for b in s["bands"]], "balance": s["balance"]})
+
+
+def set_value(value, cfg=None):
+    """Writes a value from current_value() back to the config. Returns the new config."""
+    from .automations import save_config
+    cfg = cfg or load_config()
+    pe = dict(cfg.get("pc_eq") or {})
+    if value == "off":
+        pe["enabled"] = False
+    elif value.startswith("@"):
+        pe.update(json.loads(value[1:]), enabled=True)
+    else:
+        p = presets(cfg).get(value)
+        if p is None:
+            raise ValueError(f"no existe la curva «{value}»")
+        pe.update(bands=p["bands"], balance=p["balance"], enabled=True)
+    cfg["pc_eq"] = pe
+    save_config(cfg)
+    return cfg

@@ -6,6 +6,7 @@ config.json:
         {"app": "zoom",    "when": "focused", "mode": "transparency", "eq": null}
     ]
 
+"pc_eq" (optional) is "off" or the name of a saved PC equalizer curve (see pceq.py).
 "app" is matched (case-insensitive substring) against the Hyprland window class for "focused" profiles
 and against the app name / binary of audio streams for "playing" ones. null = don't touch that setting.
 A focused profile beats a playing one. When no profile applies any more, the settings a profile changed go
@@ -155,7 +156,7 @@ class AppProfiles:
                     changes[k] = self.base[k]
             self.applied = {}
         if want:
-            for k in ("mode", "eq"):
+            for k in ("mode", "eq", "pc_eq"):
                 if want.get(k):
                     if k not in self.base or not self.active:
                         self.base[k] = cur.get(k)

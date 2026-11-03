@@ -273,13 +273,18 @@ def main():
                 d.set_mode(holder.client, changes["mode"])
             if "eq" in changes:
                 d.set_eq_preset(holder.client, changes["eq"])
+        if "pc_eq" in changes:
+            from . import pceq
+            pceq.set_value(changes["pc_eq"])
+            holder.pceq.apply()
         holder._refresh.set()
 
     def current_settings():
         st = holder.state
         if holder.client is None or not st:
             return None
-        return {"mode": st.get("mode"), "eq": st.get("eq_preset")}
+        from . import pceq
+        return {"mode": st.get("mode"), "eq": st.get("eq_preset"), "pc_eq": pceq.current_value()}
 
     from .sleeptimer import SleepTimer
 
