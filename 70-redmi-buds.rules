@@ -1,0 +1,2 @@
+# Lets the logged-in user read the AVRCP media keys of Redmi/Xiaomi Buds (gesture shortcuts in buds-manager-daemon).
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="*Buds*(AVRCP)", TAG+="uaccess"
