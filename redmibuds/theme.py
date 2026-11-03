@@ -66,6 +66,8 @@ viewswitcherbar viewswitcher button:checked {{ background: alpha({AYU['accent']}
 
 # Shared extras (both themes): layout and the custom widgets
 BASE_CSS = """
+preferencesgroup label.heading { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+preferencesgroup > box > box label.dim-label { font-size: 12.5px; }
 .hero-card { border-radius: 22px; padding: 18px 10px 16px 10px; background: var(--card-bg-color);
              box-shadow: 0 0 0 1px alpha(currentColor, 0.06), 0 4px 14px var(--card-shade-color); }
 .hero-title { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
@@ -437,3 +439,10 @@ class StatusPill(Gtk.Box):
         self.set_visible(bool(text))
         self.text.set_label(text or "")
         self.dot.set_opacity(1 if ok else 0.35)
+
+
+def card_rgba(widget):
+    """Card background of the active theme (used to cut rings around drawn marks)."""
+    if current() == "ayu":
+        return _rgba(AYU["card"])
+    return _rgba("#2e2e32" if Adw.StyleManager.get_default().get_dark() else "#ffffff")

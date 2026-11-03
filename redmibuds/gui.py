@@ -41,6 +41,13 @@ SWIPE_LABELS = [("volume", "Ajustar volumen"), ("none", "Nada")]
 EQ_LABELS = [("balanced", "Equilibrado"), ("standard", "Estándar"), ("voice", "Voz"), ("bass", "Más graves"),
              ("treble", "Más agudos"), ("volume", "Más volumen"), ("custom", "Personalizado")]
 TAP_LABELS = [("single", "Un toque"), ("double", "Doble toque"), ("triple", "Triple toque")]
+# short labels for the gestures table (two columns must fit a narrow window)
+TAP_ACTION_SHORT = [("none", "Nada"), ("play-pause", "Reproducir"), ("previous", "Anterior"), ("next", "Siguiente"),
+                    ("volume-up", "Subir vol."), ("volume-down", "Bajar vol.")]
+LONG_ACTION_SHORT = [("anc-cycle", "Modo de ruido"), ("assistant", "Asistente"), ("none", "Nada")]
+CYCLE_SHORT = [("anc-transparency", "ANC ↔ Transp."), ("anc-off", "ANC ↔ Apagado"),
+               ("transparency-off", "Transp. ↔ Apag."), ("all", "Los tres")]
+SWIPE_SHORT = [("volume", "Volumen"), ("none", "Nada")]
 TAP_ACTION_LABELS = [("none", "Nada"), ("play-pause", "Reproducir / pausar"), ("previous", "Pista anterior"),
                      ("next", "Pista siguiente"), ("volume-up", "Subir volumen"), ("volume-down", "Bajar volumen")]
 LONG_ACTION_LABELS = [("anc-cycle", "Cambiar modo de ruido"), ("assistant", "Asistente de voz"), ("none", "Nada")]
@@ -56,8 +63,9 @@ EQ_PRESETS_CURVES = {  # quick shapes for the custom curve
 
 CSS = """
 .eq-band-label { font-size: 11px; opacity: .7; font-feature-settings: "tnum"; }
-.pceq-scale value { font-size: 10px; font-feature-settings: "tnum"; min-width: 0; }
-.pceq-scale { padding-left: 0; padding-right: 0; }
+.eq-card { padding: 8px 6px 4px 0; }
+.gesture-label { font-weight: 700; font-size: 11px; letter-spacing: .06em; opacity: .55; }
+dropdown.gesture-dd > button { padding: 4px 8px; }
 row.bt-connected .title { font-weight: 700; }
 /* narrow layout (Adw.Breakpoint below 520sp) */
 """
@@ -375,15 +383,10 @@ class Window(Adw.ApplicationWindow):
         for box in self._page_boxes:
             box.set_margin_start(m)
             box.set_margin_end(m)
-        self.eq_frame.set_spacing(0 if narrow else 2)
-        self.eq_frame.set_margin_start(0 if narrow else 6)
-        self.eq_frame.set_margin_end(0 if narrow else 6)
+
         for card in getattr(self, "batt", {}).values():
             card.art.set_size_request(*(2 * (84 if narrow else 112,)))
-        if getattr(self, "pceq_frame", None):
-            self.pceq_frame.set_spacing(0 if narrow else 2)
-            self.pceq_frame.set_margin_start(0 if narrow else 6)
-            self.pceq_frame.set_margin_end(0 if narrow else 6)
+
         self._sync_switcher()
 
     def _sync_switcher(self):
@@ -612,9 +615,7 @@ class Window(Adw.ApplicationWindow):
     def _build_exposure(self):
         g = Adw.PreferencesGroup(
             title="Salud auditiva",
-            description="Estimación de la dosis de sonido de los últimos 7 días según el límite de la OMS "
-                        "(80 dB durante 40 h a la semana). Se calcula con el volumen del sistema mientras "
-                        "llevas los audífonos puestos; no es una medición.")
+            description="Dosis de sonido de los últimos 7 días frente al límite de la OMS (80 dB, 40 h a la semana). Es una estimación.")
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, css_classes=["card"])
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=14, margin_bottom=14,
                         margin_start=14, margin_end=14)
@@ -672,8 +673,7 @@ class Window(Adw.ApplicationWindow):
     def _build_profiles(self):
         self.prof_group = Adw.PreferencesGroup(
             title="Perfiles por app",
-            description="Cambia el control de ruido o el ecualizador mientras usas una app, y lo devuelve "
-                        "como estaba al dejarla. «En primer plano» gana a «Mientras suena».")
+            description="Cambia el sonido mientras usas una app y lo devuelve al dejarla.")
         add = Gtk.Button(icon_name="list-add-symbolic", tooltip_text="Nuevo perfil", valign=Gtk.Align.CENTER)
         add.add_css_class("flat")
         add.connect("clicked", lambda *_: self._edit_profile(None))
@@ -830,7 +830,7 @@ class Window(Adw.ApplicationWindow):
 
         self.curve_group = Adw.PreferencesGroup(
             title="Curva personalizada",
-            description="Mueve una banda y el perfil pasa a «Personalizado». De −6 a +6 dB.")
+            description="Arrastra los puntos (±6 dB). El perfil pasa a «Personalizado».")
         reset = Gtk.MenuButton(icon_name="view-more-symbolic", valign=Gtk.Align.CENTER, tooltip_text="Curvas rápidas")
         reset.add_css_class("flat")
         menu = Gio.Menu()
@@ -839,28 +839,14 @@ class Window(Adw.ApplicationWindow):
         reset.set_menu_model(menu)
         self.curve_group.set_header_suffix(reset)
 
-        frame = Gtk.Box(spacing=2, homogeneous=True, margin_top=12, margin_bottom=12, margin_start=6, margin_end=6)
-        frame.add_css_class("card")
+        from .eqcurve import EqCurve
+        frame = Gtk.Box(css_classes=["card", "eq-card"])
         self.eq_frame = frame
-        self.sliders = []
-        for f in d.DEFAULT_EQ_FREQS:
-            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=10, margin_bottom=10)
-            sc = Gtk.Scale(orientation=Gtk.Orientation.VERTICAL, inverted=True, height_request=220,
-                           draw_value=True, digits=0, value_pos=Gtk.PositionType.TOP)
-            sc.set_range(-6, 6)
-            sc.set_increments(1, 1)
-            sc.set_round_digits(0)
-            sc.set_has_origin(False)
-            sc.add_mark(0, Gtk.PositionType.LEFT, None)
-            sc.set_format_value_func(lambda _s, v: f"{int(round(v)):+d}" if round(v) else "0")
+        self.eq_curve = EqCurve([_freq_label(f) for f in d.DEFAULT_EQ_FREQS], 6)
+        self.sliders = self.eq_curve.bands
+        for sc in self.sliders:
             sc.connect("value-changed", self._on_slider)
-            col.append(sc)
-            lbl = Gtk.Label(label=_freq_label(f))
-            lbl.add_css_class("eq-band-label")
-            sc.freq_label = lbl
-            col.append(lbl)
-            frame.append(col)
-            self.sliders.append(sc)
+        frame.append(self.eq_curve)
         self.curve_group.add(frame)
         box.append(self.curve_group)
         box.append(self._build_pc_eq())
@@ -874,8 +860,7 @@ class Window(Adw.ApplicationWindow):
         self._pceq_timer = 0
         g = Adw.PreferencesGroup(
             title="Ecualizador de la PC",
-            description="Más fino que el de los audífonos: ±12 dB y balance izquierda/derecha. Funciona sobre "
-                        "el anterior, solo para lo que suena en esta PC y con el servicio activo.")
+            description="±12 dB y balance, para lo que suena en esta PC.")
         reset = Gtk.Button(icon_name="edit-undo-symbolic", tooltip_text="Restablecer", valign=Gtk.Align.CENTER)
         reset.add_css_class("flat")
         reset.connect("clicked", lambda *_: self._pc_eq_reset())
@@ -901,29 +886,15 @@ class Window(Adw.ApplicationWindow):
         lb.append(self.pceq_curve_row)
         g.add(lb)
 
-        frame = Gtk.Box(spacing=2, homogeneous=True, margin_top=12, margin_start=6, margin_end=6)
-        frame.add_css_class("card")
+        from .eqcurve import EqCurve
+        frame = Gtk.Box(css_classes=["card", "eq-card"], margin_top=12)
         self.pceq_frame = frame
-        self.pceq_sliders = []
-        for f, val in zip(pceq.FREQS, s["bands"]):
-            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=10, margin_bottom=10)
-            sc = Gtk.Scale(orientation=Gtk.Orientation.VERTICAL, inverted=True, height_request=200,
-                           draw_value=True, digits=0, value_pos=Gtk.PositionType.TOP)
-            sc.add_css_class("pceq-scale")
-            sc.set_range(-pceq.LIMIT, pceq.LIMIT)
-            sc.set_increments(1, 3)
-            sc.set_round_digits(0)
-            sc.set_has_origin(False)
-            sc.add_mark(0, Gtk.PositionType.LEFT, None)
-            sc.set_value(val)
-            sc.set_format_value_func(lambda _s, v: f"{int(round(v)):+d}" if round(v) else "0")
+        self.pceq_curve = EqCurve([_freq_label(f) for f in pceq.FREQS], int(pceq.LIMIT))
+        self.pceq_sliders = self.pceq_curve.bands
+        for sc, val in zip(self.pceq_sliders, s["bands"]):
+            sc.value = round(val)
             sc.connect("value-changed", lambda *_: self._pc_eq_save())
-            col.append(sc)
-            lbl = Gtk.Label(label=_freq_label(f))
-            lbl.add_css_class("eq-band-label")
-            col.append(lbl)
-            frame.append(col)
-            self.pceq_sliders.append(sc)
+        frame.append(self.pceq_curve)
         g.add(frame)
 
         bal_box = Gtk.Box(spacing=10, margin_top=12)
@@ -1092,39 +1063,52 @@ class Window(Adw.ApplicationWindow):
         self._updating = False
         return False
 
+    def _dropdown(self, pairs, on_change):
+        dd = Gtk.DropDown(model=_string_list(pairs), hexpand=True, css_classes=["gesture-dd"])
+        dd.pairs = pairs
+
+        def changed(w, _):
+            if not self._updating and w.get_selected() < len(pairs):
+                on_change(pairs[w.get_selected()][0])
+        dd.connect("notify::selected", changed)
+        return dd
+
     def _build_controls(self):
         box = self._box()
         self.gesture_rows = {}
-        for tap, title in TAP_LABELS:
-            g = Adw.PreferencesGroup(title=title)
-            for side, side_label in (("left", "Audífono izquierdo"), ("right", "Audífono derecho")):
-                row = self._combo(side_label, TAP_ACTION_LABELS,
-                                  lambda a, tap=tap, side=side: self.run(
-                                      "gesto", lambda c: d.set_gesture(c, tap, side, a)))
-                self.gesture_rows[(tap, side)] = row
-                g.add(row)
-            box.append(g)
-
-        g = Adw.PreferencesGroup(title="Mantener pulsado")
         self.cycle_rows = {}
-        for side, side_label in (("left", "Izquierdo"), ("right", "Derecho")):
-            row = self._combo(side_label, LONG_ACTION_LABELS, lambda a, side=side: self.run(
-                "pulsación larga", lambda c: d.set_gesture(c, "long", side, a)))
-            self.gesture_rows[("long", side)] = row
-            g.add(row)
-            crow = self._combo(f"Modos que recorre ({side_label.lower()})", CYCLE_LABELS,
-                               lambda cy, side=side: self.run(
-                                   "ciclo", lambda c: d.set_anc_cycle(c, side, cy)))
-            self.cycle_rows[side] = crow
-            g.add(crow)
-        box.append(g)
-
-        g = Adw.PreferencesGroup(title="Deslizar", description="Desliza el dedo sobre el tallo del audífono")
-        for side, side_label in (("left", "Audífono izquierdo"), ("right", "Audífono derecho")):
-            row = self._combo(side_label, SWIPE_LABELS, lambda a, side=side: self.run(
-                "deslizar", lambda c: d.set_gesture(c, "swipe", side, a)))
-            self.gesture_rows[("swipe", side)] = row
-            g.add(row)
+        g = Adw.PreferencesGroup(title="Gestos", description="Toca o desliza el tallo de cada audífono")
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, css_classes=["card", "gesture-card"])
+        grid = Gtk.Grid(column_spacing=10, row_spacing=0, column_homogeneous=True, margin_start=12, margin_end=12,
+                        margin_top=10, margin_bottom=12)
+        for col, (kind, name) in enumerate((("left", "Izquierdo"), ("right", "Derecho"))):
+            head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_bottom=4)
+            head.append(theme.DeviceArt(kind, 64))
+            head.append(Gtk.Label(label=name, css_classes=["ring-name"]))
+            grid.attach(head, col, 0, 1, 1)
+        rows = [(tap, title, TAP_ACTION_SHORT) for tap, title in TAP_LABELS] + \
+               [("long", "Mantener pulsado", LONG_ACTION_SHORT), ("cycle", "Modos que recorre", CYCLE_SHORT),
+                ("swipe", "Deslizar", SWIPE_SHORT)]
+        for r, (tap, title, pairs) in enumerate(rows, start=1):
+            lbl = Gtk.Label(label=title.upper(), xalign=0.5, css_classes=["gesture-label"], margin_top=12)
+            grid.attach(lbl, 0, 2 * r - 1, 2, 1)
+            if tap == "cycle":
+                self.cycle_label = lbl
+            for col, side in enumerate(("left", "right")):
+                if tap == "cycle":
+                    dd = self._dropdown(pairs, lambda cy, side=side: self.run(
+                        "ciclo", lambda c: d.set_anc_cycle(c, side, cy)))
+                    self.cycle_rows[side] = dd
+                else:
+                    what = {"long": "pulsación larga", "swipe": "deslizar"}.get(tap, "gesto")
+                    dd = self._dropdown(pairs, lambda a, tap=tap, side=side, what=what: self.run(
+                        what, lambda c: d.set_gesture(c, tap, side, a)))
+                    self.gesture_rows[(tap, side)] = dd
+                dd.set_valign(Gtk.Align.CENTER)
+                dd.set_margin_top(4)
+                grid.attach(dd, col, 2 * r, 1, 1)
+        card.append(grid)
+        g.add(card)
         box.append(g)
         box.append(self._build_pc_shortcuts())
         return box
@@ -1134,9 +1118,7 @@ class Window(Adw.ApplicationWindow):
     def _build_pc_shortcuts(self):
         g = Adw.PreferencesGroup(
             title="Atajos en esta PC",
-            description="Los toques mandan a la PC la acción que elegiste arriba (reproducir, siguiente…). "
-                        "Aquí decides qué hace la PC al recibirla. Solo cuando el audio sale por esta PC; "
-                        "el celular no cambia.")
+            description="Qué hace la PC con cada toque. Solo cuando el audio sale por esta PC.")
         self.pc_status_row = Adw.ActionRow(title="Estado", subtitle="—")
         self.pc_status_icon = Gtk.Image.new_from_icon_name("object-select-symbolic")
         self.pc_status_row.add_prefix(self.pc_status_icon)
@@ -1224,8 +1206,7 @@ class Window(Adw.ApplicationWindow):
         box.append(self.battery_group)
 
         g = Adw.PreferencesGroup(title="Prueba de ajuste",
-                                 description="Comprueba si las almohadillas sellan bien. Ponte los dos "
-                                             "audífonos y quédate en silencio: sonará un tono unos segundos.")
+                                 description="Ponte los dos audífonos y quédate en silencio unos segundos.")
         self.fit_btn = Gtk.Button(label="Iniciar prueba", valign=Gtk.Align.CENTER)
         self.fit_btn.add_css_class("suggested-action")
         self.fit_btn.connect("clicked", self._fit_test)
@@ -1238,7 +1219,7 @@ class Window(Adw.ApplicationWindow):
         box.append(g)
 
         g = Adw.PreferencesGroup(title="Buscar audífonos",
-                                 description="Emiten un pitido fuerte. Quítatelos antes de usarlo.")
+                                 description="Emiten un pitido fuerte: quítatelos antes.")
         btns = Gtk.Grid(column_spacing=8, row_spacing=8, column_homogeneous=True)
         for i, (target, label) in enumerate((("left", "Izquierdo"), ("right", "Derecho"), ("both", "Ambos"))):
             b = Gtk.Button(label=label)
@@ -1294,8 +1275,7 @@ class Window(Adw.ApplicationWindow):
 
     def _build_automations(self):
         g = Adw.PreferencesGroup(title="Automatizaciones en esta PC",
-                                 description="Las hace el servicio de «Mantener el control en esta PC» "
-                                             "(pestaña Conexión).")
+                                 description="Necesitan «Mantener el control en esta PC» (Conexión).")
         cfg = autom.load_config()
         self.auto_rows = {}
         for key, title, sub in self.AUTO_ROWS:
@@ -1352,9 +1332,7 @@ class Window(Adw.ApplicationWindow):
     def _build_connection(self):
         box = self._box()
         g = Adw.PreferencesGroup(title="Escuchar en dos dispositivos",
-                                 description="Con el multipunto los audífonos quedan conectados a la vez a dos "
-                                             "equipos (por ejemplo, el celular y esta PC) y cambian solos al que "
-                                             "empiece a reproducir o reciba una llamada.")
+                                 description="Conectados a la vez al celular y a esta PC.")
         row = self._switch("Conexión multipunto", "Mantener dos dispositivos conectados al mismo tiempo",
                            lambda on: self.run("multipunto",
                                                lambda c: d.set_bool(c, p.CFG_DOUBLE_CONNECTION, on, "multipunto")))
@@ -1369,8 +1347,7 @@ class Window(Adw.ApplicationWindow):
 
     def _hold_row(self):
         row = Adw.SwitchRow(title="Mantener el control en esta PC",
-                            subtitle="Un servicio guarda el canal de ajustes para la PC. El celular sigue "
-                                     "reproduciendo, pero su menú de los audífonos no podrá cambiar ajustes.")
+                            subtitle="El celular sigue reproduciendo, pero no podrá cambiar ajustes")
         row.connect("notify::active", self._on_hold)
         return row
 
@@ -1404,10 +1381,7 @@ class Window(Adw.ApplicationWindow):
 
     def _build_codec(self):
         g = Adw.PreferencesGroup(title="Calidad de audio en esta PC",
-                                 description="LDAC da la mejor calidad. Usar el micrófono de los audífonos "
-                                             "baja la música a calidad de llamada: con «Solo en llamadas» se "
-                                             "activa con Discord, Zoom, Telegram o el navegador y vuelve a la "
-                                             "música al colgar; las demás apps usan el micrófono de la PC.")
+                                 description="LDAC suena mejor. El micrófono de los audífonos baja la música a calidad de llamada; «Solo en llamadas» lo usa con Discord, Zoom, el navegador…")
         self.profile_row = Adw.ComboRow(title="Códec")
         self.profile_row.pairs = []
         self.profile_row.connect("notify::selected", self._on_profile)
@@ -1653,6 +1627,8 @@ class Window(Adw.ApplicationWindow):
             self.battery_group.refresh()
         cyc = st.get("anc_cycle") or {}
         longg = (st.get("gestures") or {}).get("long", {})
+        if getattr(self, "cycle_label", None):
+            self.cycle_label.set_visible(any(longg.get(sd) == "anc-cycle" for sd in ("left", "right")))
         for side, row in self.cycle_rows.items():
             self._select(row, cyc.get(side))
             row.set_visible(longg.get(side) == "anc-cycle")
