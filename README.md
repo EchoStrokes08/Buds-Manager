@@ -153,6 +153,21 @@ Necesita el servicio activo (`buds hold on`) y la regla udev para leer `/dev/inp
   Tooltip con modo y batería. Instalar: `cp buds-tray.service ~/.config/systemd/user/ &&
   systemctl --user enable --now buds-tray`.
 
+## Más funciones del servicio
+
+- **Temporizador para dormir** (`buds dormir 30|off`, o el menú de la bandeja): en los últimos minutos baja
+  el volumen poco a poco, pausa y apaga la cancelación; luego restaura el volumen.
+- **Rueda del mouse sobre el ícono de la bandeja**: cambia el modo de ruido.
+- **Historial de batería** (Dispositivo): gráfica de 48 h / 7 días, tiempo restante estimado (también en el
+  tooltip de la bandeja) y ritmo de descarga por mes para notar el desgaste. Se guarda en
+  `~/.local/state/redmi-buds/battery.csv`.
+- **Salud auditiva** (Sonido, `buds exposicion`): dosis de sonido de los últimos 7 días según la OMS
+  (80 dB durante 40 h a la semana), con avisos al 80 % y 100 %. Es una **estimación** con el volumen del
+  sistema; calíbrala con `ref_spl` en `config.json` (dB que alcanza la música al 100 %; 95 por defecto).
+- **Ecualizador de la PC** (Ecualizador): 10 bandas de ±12 dB, preganancia automática y balance
+  izquierda/derecha, con un filtro de PipeWire que crea la salida «REDMI Buds (ecualizador de la PC)».
+  Solo en modo música; se detiene en llamadas y vuelve al colgar. Los cambios se aplican en vivo.
+
 ## Perfiles por app
 
 En **Sonido → Perfiles por app** (o `app_profiles` en `config.json`): cambia el control de ruido y/o el

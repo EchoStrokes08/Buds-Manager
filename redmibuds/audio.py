@@ -179,7 +179,9 @@ def set_default_source(name):
 
 
 def is_buds_node(name, mac):
-    return name.startswith("bluez_") and mac.replace(":", "_").upper() in name.replace(":", "_").upper()
+    """True for the earbuds' own nodes and for the PC equalizer's virtual output in front of them."""
+    return (name.startswith("bluez_") or name.startswith("buds_pceq.")) and \
+        mac.replace(":", "_").upper() in name.replace(":", "_").upper()
 
 
 def pc_sink():
@@ -200,8 +202,9 @@ def pc_source():
 
 
 def buds_sink(mac):
+    """The earbuds' real Bluetooth output (not the PC equalizer)."""
     for s in _json("list", "sinks"):
-        if is_buds_node(s["name"], mac):
+        if s["name"].startswith("bluez_") and is_buds_node(s["name"], mac):
             return s["name"]
     return None
 

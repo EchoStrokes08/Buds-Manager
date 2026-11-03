@@ -36,8 +36,8 @@ def level_db(volume, ref=DEFAULT_REF):
     return ref + 60 * math.log10(max(volume, 1e-4))
 
 
-def _sink_volume():
-    out = subprocess.run(["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"], capture_output=True, text=True,
+def _sink_volume(target="@DEFAULT_AUDIO_SINK@"):
+    out = subprocess.run(["wpctl", "get-volume", str(target)], capture_output=True, text=True,
                          timeout=3).stdout
     m = re.search(r"Volume: ([\d.]+)", out)
     return (float(m.group(1)), "MUTED" in out) if m else (None, False)
@@ -105,6 +105,11 @@ class Exposure:
             return
         sink_index = next((s["index"] for s in audio._json("list", "sinks") if s["name"] == sink), None)
         vol, muted = _sink_volume()
+        if vol is not None and sink.startswith("buds_pceq."):
+            # the PC equalizer's output feeds the earbuds' own output: both volumes count
+            real = next((s["index"] for s in audio._json("list", "sinks") if s["name"] == audio.buds_sink(mac)), None)
+            v2, m2 = _sink_volume(real) if real is not None else (1.0, False)
+            vol, muted = vol * (v2 if v2 is not None else 1.0), muted or m2
         if vol is None or muted or not _playing_on(sink_index):
             self.level_now = None
             return

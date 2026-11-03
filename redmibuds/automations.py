@@ -26,6 +26,7 @@ DEFAULTS = {
     "call_mic": "calls",       # earbuds' mic: calls | any | never (see calls.py)
     "exposure": True,          # listening-dose estimate and alerts (see exposure.py)
     "ref_spl": 95.0,           # dB that typical music reaches at 100 % volume (exposure calibration)
+    "pc_eq": {"enabled": False, "bands": [0] * 10, "balance": 0},   # see pceq.py
     "call_denoise": True,      # RNNoise on the earbuds' mic during calls (see denoise.py)
     "call_apps": [],           # extra app names treated as call apps
     "app_profiles": [],        # per-app noise mode / EQ (see profiles.py)
@@ -75,8 +76,8 @@ def _run(*args):
 
 def _audio_on_buds(mac):
     """Only react when this PC is actually sending audio to the earbuds."""
-    sink = _run("pactl", "get-default-sink")
-    return sink.startswith("bluez_output.") and mac.replace(":", "_").upper() in sink.upper()
+    from . import audio
+    return audio.is_buds_node(_run("pactl", "get-default-sink"), mac)
 
 
 def _playing_players():
@@ -229,7 +230,10 @@ class Automations:
             self.output_moved = None
             if audio.default_sink() != pc:
                 return                  # the user picked another output meanwhile; leave it
-            target = audio.buds_sink(mac) or buds
+            sinks = {s["name"] for s in audio._json("list", "sinks")}
+            target = buds if buds in sinks else audio.buds_sink(mac)   # back to the EQ output if it still runs
+            if not target:
+                return
             audio.set_default_sink(target)
             log("salida: audífonos puestos →", target)
 

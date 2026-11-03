@@ -58,6 +58,8 @@ CSS = """
 .battery-level { font-size: 26px; font-weight: 800; font-feature-settings: "tnum"; }
 .battery-name { font-size: 13px; opacity: .7; }
 .eq-band-label { font-size: 11px; opacity: .7; font-feature-settings: "tnum"; }
+.pceq-scale value { font-size: 10px; font-feature-settings: "tnum"; min-width: 0; }
+.pceq-scale { padding-left: 0; padding-right: 0; }
 .hero-title { font-size: 20px; font-weight: 800; }
 .mode-toggles { padding: 4px; }
 .mode-toggles button { min-height: 52px; }
@@ -423,6 +425,10 @@ class Window(Adw.ApplicationWindow):
         self.eq_frame.set_spacing(0 if narrow else 2)
         self.eq_frame.set_margin_start(0 if narrow else 6)
         self.eq_frame.set_margin_end(0 if narrow else 6)
+        if getattr(self, "pceq_frame", None):
+            self.pceq_frame.set_spacing(0 if narrow else 2)
+            self.pceq_frame.set_margin_start(0 if narrow else 6)
+            self.pceq_frame.set_margin_end(0 if narrow else 6)
         self._sync_switcher()
 
     def _sync_switcher(self):
@@ -883,7 +889,110 @@ class Window(Adw.ApplicationWindow):
             self.sliders.append(sc)
         self.curve_group.add(frame)
         box.append(self.curve_group)
+        box.append(self._build_pc_eq())
         return box
+
+    # ---------- PC equalizer + balance ----------
+
+    def _build_pc_eq(self):
+        from . import pceq
+        s = pceq.settings()
+        self._pceq_timer = 0
+        g = Adw.PreferencesGroup(
+            title="Ecualizador de la PC",
+            description="Más fino que el de los audífonos: ±12 dB y balance izquierda/derecha. Funciona sobre "
+                        "el anterior, solo para lo que suena en esta PC y con el servicio activo.")
+        reset = Gtk.Button(icon_name="edit-undo-symbolic", tooltip_text="Restablecer", valign=Gtk.Align.CENTER)
+        reset.add_css_class("flat")
+        reset.connect("clicked", lambda *_: self._pc_eq_reset())
+        g.set_header_suffix(reset)
+        self.pceq_switch = self._switch("Activar", "Crea la salida «REDMI Buds (ecualizador de la PC)»",
+                                        lambda on: self._pc_eq_save())
+        was, self._updating = self._updating, True     # building: don't save
+        self.pceq_switch.set_active(s["enabled"])
+        self._updating = was
+        lb = Gtk.ListBox(css_classes=["boxed-list"], selection_mode=Gtk.SelectionMode.NONE)
+        lb.append(self.pceq_switch)
+        g.add(lb)
+
+        frame = Gtk.Box(spacing=2, homogeneous=True, margin_top=12, margin_start=6, margin_end=6)
+        frame.add_css_class("card")
+        self.pceq_frame = frame
+        self.pceq_sliders = []
+        for f, val in zip(pceq.FREQS, s["bands"]):
+            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=10, margin_bottom=10)
+            sc = Gtk.Scale(orientation=Gtk.Orientation.VERTICAL, inverted=True, height_request=200,
+                           draw_value=True, digits=0, value_pos=Gtk.PositionType.TOP)
+            sc.add_css_class("pceq-scale")
+            sc.set_range(-pceq.LIMIT, pceq.LIMIT)
+            sc.set_increments(1, 3)
+            sc.set_round_digits(0)
+            sc.set_has_origin(False)
+            sc.add_mark(0, Gtk.PositionType.LEFT, None)
+            sc.set_value(val)
+            sc.set_format_value_func(lambda _s, v: f"{int(round(v)):+d}" if round(v) else "0")
+            sc.connect("value-changed", lambda *_: self._pc_eq_save())
+            col.append(sc)
+            lbl = Gtk.Label(label=_freq_label(f))
+            lbl.add_css_class("eq-band-label")
+            col.append(lbl)
+            frame.append(col)
+            self.pceq_sliders.append(sc)
+        g.add(frame)
+
+        bal_box = Gtk.Box(spacing=10, margin_top=12)
+        bal_box.add_css_class("card")
+        inner = Gtk.Box(spacing=10, margin_top=10, margin_bottom=10, margin_start=14, margin_end=14, hexpand=True)
+        inner.append(Gtk.Label(label="Izq.", css_classes=["caption"]))
+        self.pceq_balance = Gtk.Scale(hexpand=True, draw_value=False)
+        self.pceq_balance.set_range(-100, 100)
+        self.pceq_balance.set_increments(5, 10)
+        self.pceq_balance.set_round_digits(0)
+        self.pceq_balance.set_has_origin(False)
+        self.pceq_balance.add_mark(0, Gtk.PositionType.BOTTOM, "Centro")
+        self.pceq_balance.set_value(s["balance"])
+        self.pceq_balance.connect("value-changed", lambda *_: self._pc_eq_save())
+        self.pceq_balance.update_property([Gtk.AccessibleProperty.LABEL], ["Balance izquierda / derecha"])
+        inner.append(self.pceq_balance)
+        inner.append(Gtk.Label(label="Der.", css_classes=["caption"]))
+        bal_box.append(inner)
+        g.add(bal_box)
+        return g
+
+    def _pc_eq_reset(self):
+        self._updating = True
+        for sc in self.pceq_sliders:
+            sc.set_value(0)
+        self.pceq_balance.set_value(0)
+        self._updating = False
+        self._pc_eq_save()
+
+    def _pc_eq_save(self):
+        if self._updating:
+            return
+        if self._pceq_timer:
+            GLib.source_remove(self._pceq_timer)
+        self._pceq_timer = GLib.timeout_add(150, self._pc_eq_commit)
+
+    def _pc_eq_commit(self):
+        self._pceq_timer = 0
+        cfg = autom.load_config()
+        cfg["pc_eq"] = {"enabled": self.pceq_switch.get_active(),
+                        "bands": [int(round(sc.get_value())) for sc in self.pceq_sliders],
+                        "balance": int(round(self.pceq_balance.get_value()))}
+        try:
+            autom.save_config(cfg)
+        except OSError as e:
+            self.toast(f"⚠ {e}", 4)
+            return False
+
+        def go():
+            try:
+                remote.call({"op": "pc_eq"}, timeout=8)
+            except (OSError, ValueError, p.BudsError):
+                GLib.idle_add(self.toast, "El ecualizador de la PC necesita el servicio (pestaña Conexión)", 4)
+        threading.Thread(target=go, daemon=True).start()
+        return False
 
     def _hearing_test(self, *_):
         if not self.state:

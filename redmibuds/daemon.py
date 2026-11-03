@@ -195,6 +195,9 @@ class Holder:
             return {"running": True, "holding": self.client is not None, "mac": self.mac,
                     "gestures": {"device": g.device, "problem": g.problem} if g else None,
                     "reason": self.reason, "reason_text": REASONS.get(self.reason), "notif_count": self.count}
+        if op == "pc_eq":
+            self.pceq.apply()
+            return {"running": self.pceq.running, "target": self.pceq.target}
         if op == "sleep_timer":
             t = self.sleep
             if req.get("cancel"):
@@ -286,6 +289,10 @@ def main():
                 d.set_mode(holder.client, mode)
         holder._refresh.set()
     holder.sleep = SleepTimer(set_mode)
+
+    from .pceq import PcEq
+    holder.pceq = PcEq(lambda: holder.mac or find_mac())
+    holder.pceq.start()
 
     from .exposure import Exposure
     holder.exposure = Exposure(lambda: holder.mac or find_mac(),
