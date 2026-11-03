@@ -93,7 +93,8 @@ class Tray:
     def __init__(self):
         self.bus = Gio.bus_get_sync(Gio.BusType.SESSION)
         self.name = f"org.kde.StatusNotifierItem-{os.getpid()}-1"
-        self.info = {"state": None, "reason_text": "Conectando…", "battery": None}
+        self.info = {"state": None, "reason_text": "Conectando…", "battery": None, "sleep": None}
+        self._scroll_at = 0
         self.revision = 1
         self.actions = {}          # menu id -> callable
         self._layout = None
@@ -115,8 +116,10 @@ class Tray:
         while True:
             try:
                 r = remote.call({"op": "state"}, timeout=5)
+                sl = r.get("sleep") or {}
                 info = {"state": r.get("state") if r.get("holding") else None,
-                        "reason_text": r.get("reason_text"), "battery": r.get("battery")}
+                        "reason_text": r.get("reason_text"), "battery": r.get("battery"),
+                        "sleep": (sl.get("remaining") + 59) // 60 if sl.get("remaining") else None}
             except (OSError, ValueError, p.BudsError):
                 info = {"state": None, "battery": None,
                         "reason_text": "Servicio apagado: actívalo en Buds Manager → Conexión"}
@@ -125,7 +128,8 @@ class Tray:
                 continue
             GLib.idle_add(self._set, info)
             try:
-                remote.call({"op": "wait_change", "wait": 60}, timeout=75)
+                # while the sleep timer runs, refresh each minute so the menu shows the time left
+                remote.call({"op": "wait_change", "wait": 60 if not info["sleep"] else 30}, timeout=75)
             except (OSError, ValueError, p.BudsError):
                 time.sleep(5)
 
@@ -144,7 +148,8 @@ class Tray:
         st = self.info["state"]
         if st:
             mode = dict(MODES).get(st.get("mode"), "—")
-            return "REDMI Buds", f"{mode}\n{_batt_text(st.get('battery'))}"
+            extra = f"\nTemporizador: {self.info['sleep']} min" if self.info.get("sleep") else ""
+            return "REDMI Buds", f"{mode}\n{_batt_text(st.get('battery'))}{extra}"
         body = self.info.get("reason_text") or ""
         if self.info.get("battery"):
             body += "\n" + _batt_text(self.info["battery"])
@@ -192,8 +197,34 @@ class Tray:
         else:
             items.append(item(self.info.get("reason_text") or "Sin conexión", enabled=False))
         items.append(sep())
+        left = self.info.get("sleep")
+        timer_items = [item(f"{m} min", lambda m=m: self._sleep(m)) for m in (15, 30, 45, 60, 90)]
+        if left:
+            timer_items += [sep(), item("Cancelar", lambda: self._sleep(None))]
+        items.append(item(f"Dormir · faltan {left} min" if left else "Temporizador para dormir",
+                          children=timer_items))
+        items.append(sep())
         items.append(item("Abrir Buds Manager", lambda: self._run(MANAGER)))
         self._layout = (0, {"children-display": GLib.Variant("s", "submenu")}, items)
+
+    def _scroll_mode(self, step):
+        cur = (self.info.get("state") or {}).get("mode")
+        keys = [k for k, _ in MODES]
+        if cur not in keys:
+            return
+        self._run(BUDS, "mode", keys[(keys.index(cur) + step) % len(keys)], "--notify")
+
+    def _sleep(self, minutes):
+        def go():
+            try:
+                remote.call({"op": "sleep_timer", **({"minutes": minutes} if minutes else {"cancel": True})})
+            except (OSError, ValueError, p.BudsError):
+                return
+            r = remote.call({"op": "state"}, timeout=5)
+            sl = r.get("sleep") or {}
+            info = dict(self.info, sleep=(sl.get("remaining") + 59) // 60 if sl.get("remaining") else None)
+            GLib.idle_add(self._set, info)
+        threading.Thread(target=go, daemon=True).start()
 
     def _run(self, *cmd):
         subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
@@ -262,7 +293,11 @@ class Tray:
         if method in ("Activate", "SecondaryActivate"):
             self._run(MANAGER)
         elif method == "Scroll":
-            pass
+            delta, orientation = params.unpack()
+            # one notch can arrive as several events: at most one mode change per 0.7 s
+            if orientation == "vertical" and delta and time.time() - self._scroll_at > 0.7:
+                self._scroll_at = time.time()
+                self._scroll_mode(1 if delta < 0 else -1)
         inv.return_value(None)
 
     def _sni_prop(self, conn, sender, path, iface, prop):

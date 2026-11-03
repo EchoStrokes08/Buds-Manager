@@ -171,8 +171,16 @@ class Holder:
             return {"running": True, "holding": self.client is not None, "mac": self.mac,
                     "gestures": {"device": g.device, "problem": g.problem} if g else None,
                     "reason": self.reason, "reason_text": REASONS.get(self.reason), "notif_count": self.count}
+        if op == "sleep_timer":
+            t = self.sleep
+            if req.get("cancel"):
+                t.cancel()
+            elif req.get("minutes"):
+                t.start(float(req["minutes"]))
+            return t.status()
         if op == "state":
-            return {"state": self.state, "holding": self.client is not None, "mac": self.mac,
+            return {"sleep": self.sleep.status() if getattr(self, "sleep", None) else None,
+                    "state": self.state, "holding": self.client is not None, "mac": self.mac,
                     "reason": self.reason, "reason_text": REASONS.get(self.reason),
                     "battery": self.basic if self.reason == "busy" else None}
         if op == "wait_change":
@@ -240,6 +248,15 @@ def main():
         if holder.client is None or not st:
             return None
         return {"mode": st.get("mode"), "eq": st.get("eq_preset")}
+
+    from .sleeptimer import SleepTimer
+
+    def set_mode(mode):
+        with holder.lock:
+            if holder.client is not None:
+                d.set_mode(holder.client, mode)
+        holder._refresh.set()
+    holder.sleep = SleepTimer(set_mode)
 
     from .profiles import AppProfiles
     holder.profiles = AppProfiles(apply_profile, current_settings)

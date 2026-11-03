@@ -368,6 +368,20 @@ def cmd_auto(args):
     print(f"micrófono de los audífonos: {MODES.get(cfg['call_mic'], cfg['call_mic']).lower()}  (buds mic)")
 
 
+def cmd_dormir(args):
+    try:
+        if args.minutes in ("off", "cancelar", "0"):
+            st = remote.call({"op": "sleep_timer", "cancel": True})
+        elif args.minutes:
+            st = remote.call({"op": "sleep_timer", "minutes": float(args.minutes)})
+        else:
+            st = remote.call({"op": "sleep_timer"})
+    except (OSError, ValueError, p.BudsError):
+        sys.exit("El temporizador necesita el servicio: buds hold on")
+    r = st["remaining"]
+    print(f"temporizador: faltan {r // 60} min {r % 60:02d} s" if r else "temporizador: apagado")
+
+
 def cmd_mic(args):
     from . import automations as a
     from .calls import MODES
@@ -492,6 +506,9 @@ def build_parser():
     s.add_argument("what", nargs="?", choices=list(AUTO_KEYS))
     s.add_argument("state", nargs="?", choices=["on", "off"])
     s.set_defaults(fn=None)
+    s = sub.add_parser("dormir", aliases=["sleep"], help="temporizador para dormir: buds dormir 30 | off")
+    s.add_argument("minutes", nargs="?")
+    s.set_defaults(fn=None)
     s = sub.add_parser("mic", help="cuándo usar el micrófono de los audífonos: calls (solo llamadas) | any | never")
     s.add_argument("mode", nargs="?", choices=["calls", "any", "never"])
     s.set_defaults(fn=None)
@@ -514,6 +531,8 @@ def main(argv=None):
         return cmd_hold(args)
     if args.cmd == "auto":
         return cmd_auto(args)
+    if args.cmd in ("dormir", "sleep"):
+        return cmd_dormir(args)
     if args.cmd == "mic":
         return cmd_mic(args)
     if args.cmd in ("atajos", "shortcuts"):
