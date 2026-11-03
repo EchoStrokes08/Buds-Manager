@@ -290,15 +290,11 @@ class DeviceArt(Gtk.Widget):
         s = min(w, h)
         x, y = (w - s) / 2, (h - s) / 2
         px = int(math.ceil(s * self.get_scale_factor() * 1.25))
-        tex = icon_texture("case" if self.kind == "case" else "earbud", px)
+        tex = icon_texture("case" if self.kind == "case" else f"earbud-{self.kind}", px)
         snapshot.save()
         if self.dim:
             snapshot.push_opacity(0.35)
-        if self.kind == "right":
-            snapshot.translate(Graphene.Point().init(x + s, y))
-            snapshot.scale(-1, 1)
-        else:
-            snapshot.translate(Graphene.Point().init(x, y))
+        snapshot.translate(Graphene.Point().init(x, y))
         snapshot.append_texture(tex, Graphene.Rect().init(0, 0, s, s))
         if self.dim:
             snapshot.pop()

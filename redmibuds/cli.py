@@ -273,9 +273,8 @@ def make_waybar_icons(px=48):
     """Renders left / right / case icons (in the earbuds' color) for Waybar's image modules."""
     from .art import bar_icon
     os.makedirs(WAYBAR_ICON_DIR, exist_ok=True)
-    ear = bar_icon("earbud", px)
-    ear.savev(os.path.join(WAYBAR_ICON_DIR, "left.png"), "png", [], [])
-    ear.flip(True).savev(os.path.join(WAYBAR_ICON_DIR, "right.png"), "png", [], [])
+    bar_icon("earbud-left", px).savev(os.path.join(WAYBAR_ICON_DIR, "left.png"), "png", [], [])
+    bar_icon("earbud-right", px).savev(os.path.join(WAYBAR_ICON_DIR, "right.png"), "png", [], [])
     bar_icon("case", px).savev(os.path.join(WAYBAR_ICON_DIR, "case.png"), "png", [], [])
     refresh_waybar()
 

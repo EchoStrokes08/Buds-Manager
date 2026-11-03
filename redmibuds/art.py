@@ -35,10 +35,20 @@ def buds_color():
 
 
 def svg_for(name, color=None):
-    """SVG text of an illustration with the palette of `color` filled in."""
+    """SVG text of an illustration with the palette of `color` filled in.
+    name: "case", "earbud-left" or "earbud-right" (the right one is the left body mirrored, letter upright)."""
     pal = BUDS_COLORS[color or buds_color()]
+    side = None
+    if name.startswith("earbud"):
+        side = "right" if name.endswith("right") else "left"
+        name = "earbud"
     with open(os.path.join(ICON_DIR, f"{name}.svg")) as f:
         text = f.read()
+    if side:
+        right = side == "right"
+        text = (text.replace("@flip@", "translate(128,0) scale(-1,1)" if right else "translate(0,0)")
+                    .replace("@lx@", "101.5" if right else "26.5")
+                    .replace("@letter@", "R" if right else "L"))
     for k, v in pal.items():
         text = text.replace(f"@{k}@", v)
     return text
