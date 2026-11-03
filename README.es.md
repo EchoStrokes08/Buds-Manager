@@ -236,7 +236,11 @@ tiene el control.
 
 ## Pendiente
 
-- Modo juego y configs `0x75`, `0x23`, `0x66`: requieren otra captura de la app Xiaomi en Android.
+- Configs `0x75`, `0x23`, `0x66`: sin identificar.
+- Modo juego: ni el menú de HyperOS ni la app Xiaomi Earbuds lo ofrecen para los 8 Pro (firmware
+  3.2.2.6, revisado el 2026-11-03), así que probablemente no existe en este modelo.
+- Renombrar los audífonos: ambos menús lo ofrecen; falta capturar si escribe el nombre en los audífonos o
+  solo cambia el alias en el celular.
 - LE Audio: el adaptador de la PC lo soporta (CIS/ISO), pero los 8 Pro (firmware 3.2.2.6) no anuncian
   servicios LE Audio (sin `184e`/`1850`/`1853` en un escaneo LE, 2026-11-03).
 
