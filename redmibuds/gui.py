@@ -1019,20 +1019,28 @@ class Window(Adw.ApplicationWindow):
     def _on_profile(self, row, _):
         if self._updating or not row.pairs or row.get_selected() >= len(row.pairs):
             return
-        prof = row.pairs[row.get_selected()][0]
-        try:
-            audio.set_profile(self.mac, prof)
-            self.toast(f"Códec: {row.pairs[row.get_selected()][1]}")
-        except RuntimeError as e:
-            self.toast(f"⚠ {e}", 4)
-        GLib.timeout_add(800, lambda: self._update_codec() and False)
+        prof, label = row.pairs[row.get_selected()]
+        mac = self.mac
+
+        def go():
+            try:
+                audio.set_profile(mac, prof)
+                GLib.idle_add(self.toast, "Música reconectada" if prof == audio.RECONNECT else f"Códec: {label}")
+            except (RuntimeError, OSError, subprocess.SubprocessError) as e:
+                GLib.idle_add(self.toast, f"⚠ {e}", 4)
+            GLib.timeout_add(800, lambda: self._update_codec() and False)
+        threading.Thread(target=go, daemon=True).start()
 
     def _on_ldac(self, quality):
         self.toast("Aplicando calidad LDAC… el audio se cortará un momento", 3)
+        mac = self.mac
 
         def go():
-            audio.set_ldac_quality(self.mac, quality)
-            time.sleep(3)
+            try:
+                audio.set_ldac_quality(mac, quality)
+                GLib.idle_add(self.toast, "Calidad LDAC aplicada")
+            except (RuntimeError, OSError, subprocess.SubprocessError) as e:
+                GLib.idle_add(self.toast, f"⚠ {e}", 5)
             GLib.idle_add(self._update_codec)
         threading.Thread(target=go, daemon=True).start()
 
