@@ -218,6 +218,12 @@ def main():
 
     class Handler(socketserver.StreamRequestHandler):
         def handle(self):
+            try:
+                self._handle()
+            except (BrokenPipeError, ConnectionResetError):
+                pass    # the client (CLI, Waybar, GUI) gave up before the answer; nothing to do
+
+        def _handle(self):
             line = self.rfile.readline()
             if not line:
                 return
@@ -231,6 +237,10 @@ def main():
 
     class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         daemon_threads = True
+
+        def handle_error(self, request, client_address):
+            import sys
+            log("error atendiendo a un cliente:", repr(sys.exc_info()[1]))
 
     # Refuse to start twice; remove a stale socket left by a crash.
     if os.path.exists(SOCK_PATH):

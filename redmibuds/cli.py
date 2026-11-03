@@ -362,6 +362,31 @@ def cmd_auto(args):
         print(f"{'sí' if cfg[key] else 'no':3} {label}")
 
 
+def cmd_atajos(args):
+    from . import gestures as g
+    if args.key:
+        if args.action is None:
+            sys.exit("indica la acción: buds atajos next mic-mute   (o \"cmd:<comando>\")")
+        try:
+            g.set_action(args.key, args.action)
+        except ValueError as e:
+            sys.exit(f"error: {e}")
+    acts = g.get_actions()
+    print("Tecla que envían los audífonos → qué hace esta PC")
+    for key, label in g.KEY_LABELS:
+        print(f"  {key:12} {label:22} → {g.describe(acts[key])}")
+    st = remote.daemon_status()
+    gs = (st or {}).get("gestures")
+    if not st:
+        print("\nAviso: el servicio está apagado (buds hold on); los atajos solo funcionan con él.")
+    elif gs and gs.get("problem"):
+        print(f"\nAhora mismo no escucha: {gs['problem']}")
+    elif gs and gs.get("device"):
+        print(f"\nEscuchando: {gs['device']}")
+    if not args.key:
+        print("\nAcciones: " + ", ".join(g.BUILTIN) + ", cmd:<comando>")
+
+
 def build_parser():
     ap = argparse.ArgumentParser(prog="buds", description="Controla tus Redmi Buds desde Linux")
     ap.add_argument("--mac", help="MAC de los auriculares (por defecto: autodetección o $REDMI_BUDS_MAC)")
@@ -449,6 +474,11 @@ def build_parser():
     s.add_argument("what", nargs="?", choices=list(AUTO_KEYS))
     s.add_argument("state", nargs="?", choices=["on", "off"])
     s.set_defaults(fn=None)
+    s = sub.add_parser("atajos", aliases=["shortcuts"],
+                       help="qué hace la PC con cada gesto: buds atajos [tecla] [acción | cmd:<comando>]")
+    s.add_argument("key", nargs="?", metavar="tecla", choices=["play-pause", "next", "previous", "volume-up", "volume-down"])
+    s.add_argument("action", nargs="?", metavar="acción")
+    s.set_defaults(fn=None)
     return ap
 
 
@@ -463,6 +493,8 @@ def main(argv=None):
         return cmd_hold(args)
     if args.cmd == "auto":
         return cmd_auto(args)
+    if args.cmd in ("atajos", "shortcuts"):
+        return cmd_atajos(args)
     if args.cmd == "waybar":
         if args.mac:
             os.environ["REDMI_BUDS_MAC"] = args.mac

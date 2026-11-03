@@ -22,6 +22,7 @@ DEFAULTS = {
     "auto_resume": True,       # resume when it goes back in
     "battery_alerts": True,    # low battery / fully charged notifications
     "low_levels": [20, 10],
+    "gesture_actions": {},     # media key from the earbuds -> PC action (see gestures.py)
 }
 RESUME_WINDOW = 15 * 60       # don't resume something paused longer ago than this
 

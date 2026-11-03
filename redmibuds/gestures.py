@@ -44,6 +44,10 @@ BUILTIN = {
     "none": ("Nada", None),
 }
 
+# The media keys the earbuds can send, in display order (what the user picks a PC action for).
+KEY_LABELS = [("play-pause", "Reproducir / pausar"), ("next", "Pista siguiente"),
+              ("previous", "Pista anterior"), ("volume-up", "Subir volumen"), ("volume-down", "Bajar volumen")]
+
 BUDS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -57,6 +61,34 @@ def find_device():
         if name.endswith("(AVRCP)") and ("buds" in name.lower()):
             return "/dev/input/" + path.split("/")[4], name
     return None, None
+
+
+def get_actions():
+    """{key: action} for every key, defaulting to the key's own media action."""
+    cfg = (load_config().get("gesture_actions") or {})
+    return {k: cfg.get(k, k) for k, _ in KEY_LABELS}
+
+
+def set_action(key, action):
+    from .automations import save_config
+    if key not in dict(KEY_LABELS):
+        raise ValueError(f"tecla desconocida: {key}")
+    if not (action in BUILTIN or action.startswith("cmd:")):
+        raise ValueError(f"acción desconocida: {action}")
+    cfg = load_config()
+    actions = dict(cfg.get("gesture_actions") or {})
+    if action == key:
+        actions.pop(key, None)       # back to the default
+    else:
+        actions[key] = action
+    cfg["gesture_actions"] = actions
+    save_config(cfg)
+
+
+def describe(action):
+    if action.startswith("cmd:"):
+        return "Comando: " + action[4:]
+    return BUILTIN.get(action, (action,))[0]
 
 
 def _mic_mute():

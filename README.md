@@ -83,6 +83,26 @@ buds auto pausa off       # pausa | reanudar | bateria  on|off
 
 Se guarda en `~/.config/redmi-buds/config.json` (también `low_levels`, por defecto `[20, 10]`).
 
+## Atajos en esta PC (gestos → acciones)
+
+Los toques de los audífonos llegan a la PC como teclas multimedia (reproducir/pausar, siguiente,
+anterior, subir/bajar volumen), según lo que tenga asignado cada toque. El servicio toma ese dispositivo
+de entrada (`REDMI Buds 8 Pro (AVRCP)`) en exclusiva y ejecuta lo que elijas para cada tecla: la acción
+normal, silenciar el micrófono, cambiar cancelación ↔ transparencia, captura de pantalla, nada o
+cualquier comando. Solo actúa cuando el audio sale por esta PC; el celular no cambia.
+
+Se configura en **Controles → Atajos en esta PC** o con:
+
+```
+buds atajos                                   # ver la tabla y si está escuchando
+buds atajos previous mic-mute                 # triple toque «anterior» → silenciar micrófono
+buds atajos next "cmd:hyprctl dispatch workspace +1"
+buds atajos next next                         # volver a lo normal
+```
+
+Necesita el servicio activo (`buds hold on`) y la regla udev para leer `/dev/input`:
+`sudo cp 70-redmi-buds.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger`.
+
 ## Integración
 
 - Waybar: módulo `custom/buds` (clic: siguiente modo, clic derecho: ANC/apagado, clic central: Buds Manager).

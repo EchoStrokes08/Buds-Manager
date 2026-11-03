@@ -19,6 +19,7 @@ from . import protocol as p  # noqa: E402
 from .bluetooth import Bluez  # noqa: E402
 from . import audio  # noqa: E402
 from . import remote  # noqa: E402
+from . import gestures as gest  # noqa: E402
 from .cli import hold_enabled, set_hold  # noqa: E402
 from .cli import INITIAL_BACKUP, STATE_DIR, find_mac, refresh_waybar, save_backup, _freq_label  # noqa: E402
 
@@ -76,6 +77,7 @@ class Worker(threading.Thread):
 
     def __init__(self, on_state, on_error, on_busy):
         super().__init__(daemon=True)
+        self.daemon_status = None
         self.q = queue.Queue()
         self.on_state, self.on_error, self.on_busy = on_state, on_error, on_busy
 
@@ -93,6 +95,7 @@ class Worker(threading.Thread):
                     break
             GLib.idle_add(self.on_busy, True)
             ds = remote.daemon_status()
+            self.daemon_status = ds
             if ds and not ds.get("holding"):
                 batt = None
                 if ds.get("reason") == "busy":
@@ -756,7 +759,82 @@ class Window(Adw.ApplicationWindow):
             self.gesture_rows[("swipe", side)] = row
             g.add(row)
         box.append(g)
+        box.append(self._build_pc_shortcuts())
         return box
+
+    # ---------- gestures → PC shortcuts ----------
+
+    def _build_pc_shortcuts(self):
+        g = Adw.PreferencesGroup(
+            title="Atajos en esta PC",
+            description="Los toques mandan a la PC la acción que elegiste arriba (reproducir, siguiente…). "
+                        "Aquí decides qué hace la PC al recibirla. Solo cuando el audio sale por esta PC; "
+                        "el celular no cambia.")
+        self.pc_status_row = Adw.ActionRow(title="Estado", subtitle="—")
+        self.pc_status_icon = Gtk.Image.new_from_icon_name("object-select-symbolic")
+        self.pc_status_row.add_prefix(self.pc_status_icon)
+        g.add(self.pc_status_row)
+        pairs = [(k, label) for k, (label, _) in gest.BUILTIN.items()] + [("custom", "Comando personalizado…")]
+        self.pc_rows = {}
+        for key, label in gest.KEY_LABELS:
+            row = self._combo(f"Al recibir «{label}»", pairs,
+                              lambda a, key=key: self._set_pc_action(key, a))
+            entry = Adw.EntryRow(title="Comando (se ejecuta con sh)", show_apply_button=True, visible=False)
+            entry.connect("apply", lambda e, key=key: self._set_pc_action(key, "cmd:" + e.get_text().strip()))
+            row.entry = entry
+            self.pc_rows[key] = row
+            g.add(row)
+            g.add(entry)
+        self._sync_pc_shortcuts()
+        return g
+
+    def _set_pc_action(self, key, action):
+        row = self.pc_rows[key]
+        if action == "custom":
+            row.entry.set_visible(True)
+            row.entry.grab_focus()
+            return
+        if action == "cmd:":
+            self.toast("Escribe un comando primero")
+            return
+        try:
+            gest.set_action(key, action)
+        except (OSError, ValueError) as e:
+            self.toast(f"⚠ {e}", 4)
+            return
+        row.entry.set_visible(action.startswith("cmd:"))
+        self.toast(f"«{dict(gest.KEY_LABELS)[key]}» → {gest.describe(action)}")
+
+    def _sync_pc_shortcuts(self, st=None):
+        acts = gest.get_actions()
+        senders = {}
+        for tap, title in TAP_LABELS:
+            for side, short in (("left", "izq."), ("right", "der.")):
+                a = ((st or {}).get("gestures") or {}).get(tap, {}).get(side)
+                if a:
+                    senders.setdefault(a, []).append(f"{title.lower()} {short}")
+        was, self._updating = self._updating, True
+        for key, row in self.pc_rows.items():
+            act = acts[key]
+            custom = act.startswith("cmd:")
+            self._select(row, "custom" if custom else act)
+            if custom and not row.entry.has_focus():
+                row.entry.set_text(act[4:])
+            row.entry.set_visible(custom)
+            row.set_subtitle("Lo envía: " + ", ".join(senders[key]) if key in senders
+                             else "Ningún toque lo envía ahora" if st else "")
+        self._updating = was
+        ds = self.worker.daemon_status
+        gs = (ds or {}).get("gestures") or {}
+        if not ds:
+            text, icon = "Activa «Mantener el control en esta PC» (pestaña Conexión) para usar los atajos", \
+                "dialog-warning-symbolic"
+        elif gs.get("device"):
+            text, icon = f"Escuchando {gs['device'].replace(' (AVRCP)', '')}", "object-select-symbolic"
+        else:
+            text, icon = (gs.get("problem") or "esperando a los audífonos").capitalize(), "dialog-information-symbolic"
+        self.pc_status_row.set_subtitle(text)
+        self.pc_status_icon.set_from_icon_name(icon)
 
     def _build_device(self):
         box = self._box()
@@ -1124,6 +1202,7 @@ class Window(Adw.ApplicationWindow):
 
         for (tap, side), row in self.gesture_rows.items():
             self._select(row, (st.get("gestures") or {}).get(tap, {}).get(side))
+        self._sync_pc_shortcuts(st)
         cyc = st.get("anc_cycle") or {}
         longg = (st.get("gestures") or {}).get("long", {})
         for side, row in self.cycle_rows.items():
