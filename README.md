@@ -167,6 +167,9 @@ Necesita el servicio activo (`buds hold on`) y la regla udev para leer `/dev/inp
 - **Ecualizador de la PC** (Ecualizador): 10 bandas de ±12 dB, preganancia automática y balance
   izquierda/derecha, con un filtro de PipeWire que crea la salida «REDMI Buds (ecualizador de la PC)».
   Solo en modo música; se detiene en llamadas y vuelve al colgar. Los cambios se aplican en vivo.
+- **Buscar «frío o caliente»** (Dispositivo → Buscar audífonos): los hace sonar y muestra la intensidad de
+  la señal Bluetooth para saber si te acercas. Leerla requiere root; `install.sh` agrega una regla de sudo
+  que permite solo `btmgmt conn-info` (`71-redmi-buds-rssi.sudoers`).
 
 ## Perfiles por app
 
