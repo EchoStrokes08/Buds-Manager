@@ -177,6 +177,9 @@ class Holder:
                 t.cancel()
             elif req.get("minutes"):
                 t.start(float(req["minutes"]))
+            if req.get("cancel") or req.get("minutes"):
+                with self.cond:
+                    self.cond.notify_all()       # tray / app refresh right away
             return t.status()
         if op == "state":
             return {"sleep": self.sleep.status() if getattr(self, "sleep", None) else None,
