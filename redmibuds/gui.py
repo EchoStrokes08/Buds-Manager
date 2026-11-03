@@ -982,6 +982,9 @@ class Window(Adw.ApplicationWindow):
             g.add(row)
         box.append(g)
         box.append(self._build_automations())
+        from .gui_battery import BatteryHistory
+        self.battery_group = BatteryHistory()
+        box.append(self.battery_group)
 
         g = Adw.PreferencesGroup(title="Prueba de ajuste",
                                  description="Comprueba si las almohadillas sellan bien. Ponte los dos "
@@ -1392,6 +1395,8 @@ class Window(Adw.ApplicationWindow):
         for (tap, side), row in self.gesture_rows.items():
             self._select(row, (st.get("gestures") or {}).get(tap, {}).get(side))
         self._sync_pc_shortcuts(st)
+        if getattr(self, "battery_group", None):
+            self.battery_group.refresh()
         cyc = st.get("anc_cycle") or {}
         longg = (st.get("gestures") or {}).get("long", {})
         for side, row in self.cycle_rows.items():

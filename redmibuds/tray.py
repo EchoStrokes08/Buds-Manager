@@ -117,7 +117,8 @@ class Tray:
             try:
                 r = remote.call({"op": "state"}, timeout=5)
                 sl = r.get("sleep") or {}
-                info = {"state": r.get("state") if r.get("holding") else None,
+                info = {"estimate": r.get("estimate"),
+                        "state": r.get("state") if r.get("holding") else None,
                         "reason_text": r.get("reason_text"), "battery": r.get("battery"),
                         "sleep": (sl.get("remaining") + 59) // 60 if sl.get("remaining") else None}
             except (OSError, ValueError, p.BudsError):
@@ -148,7 +149,13 @@ class Tray:
         st = self.info["state"]
         if st:
             mode = dict(MODES).get(st.get("mode"), "—")
-            extra = f"\nTemporizador: {self.info['sleep']} min" if self.info.get("sleep") else ""
+            extra = ""
+            est = self.info.get("estimate")
+            if est:
+                from .battlog import fmt_hours
+                extra += f"\n≈ {fmt_hours(est['hours'])} de batería"
+            if self.info.get("sleep"):
+                extra += f"\nTemporizador: {self.info['sleep']} min"
             return "REDMI Buds", f"{mode}\n{_batt_text(st.get('battery'))}{extra}"
         body = self.info.get("reason_text") or ""
         if self.info.get("battery"):

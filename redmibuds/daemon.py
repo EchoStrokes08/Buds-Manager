@@ -50,6 +50,14 @@ class Holder:
         self.waiting = 0
         self.basic = None                   # battery from channel 17 while the phone has control
         self.auto = Automations()
+        from .battlog import BatteryLog, estimate, prune
+        self.battlog, self._estimate_fn = BatteryLog(), estimate
+        self.estimate = None
+        try:
+            prune()
+        except OSError:
+            pass
+        self._update_estimate()
         self._basic_at = 0                    # client requests queued for the lock; the pump yields to them
 
     # --- connection management ---
@@ -78,6 +86,7 @@ class Holder:
                         self.basic = basic
                         self._notify_waybar()
                     if basic:
+                        self._record_battery(basic)
                         self.auto.on_state(mac, {"battery": basic})
                 time.sleep(RETRY_BUSY if busy else RETRY_ABSENT)
                 continue
@@ -97,6 +106,20 @@ class Holder:
                 self.auto.on_state(mac, None)
                 self._set_reason("absent")
                 self._notify_waybar()
+
+    def _record_battery(self, batt):
+        try:
+            if self.battlog.record(batt):
+                self._update_estimate()
+        except OSError as e:
+            log("historial de batería:", e)
+
+    def _update_estimate(self):
+        try:
+            self.estimate = self._estimate_fn()
+        except Exception as e:  # noqa: BLE001
+            log("estimación de batería:", e)
+            self.estimate = None
 
     def _set_reason(self, reason):
         if reason != "busy":
@@ -152,6 +175,7 @@ class Holder:
             raise p.BudsError("sin respuesta de los audífonos")
         changed = _public(st) != _public(self.state)
         self.state = st
+        self._record_battery(st.get("battery"))
         self.auto.on_state(self.mac, st)
         if changed:
             with self.cond:
@@ -183,6 +207,7 @@ class Holder:
             return t.status()
         if op == "state":
             return {"sleep": self.sleep.status() if getattr(self, "sleep", None) else None,
+                    "estimate": self.estimate,
                     "state": self.state, "holding": self.client is not None, "mac": self.mac,
                     "reason": self.reason, "reason_text": REASONS.get(self.reason),
                     "battery": self.basic if self.reason == "busy" else None}
