@@ -1170,6 +1170,16 @@ class Window(Adw.ApplicationWindow):
         self._select(self.mic_row, autom.load_config().get("call_mic", "calls"))
         self._updating = False
         g.add(self.mic_row)
+        from .denoise import plugin as rnnoise_plugin
+        has = bool(rnnoise_plugin())
+        self.denoise_row = self._switch(
+            "Quitar ruido de fondo en llamadas",
+            "Filtro RNNoise sobre el micrófono de los audífonos" if has else
+            "Instala noise-suppression-for-voice para activarlo",
+            lambda on: self._set_auto("call_denoise", on))
+        self.denoise_row.set_active(has and bool(autom.load_config().get("call_denoise", True)))
+        self.denoise_row.set_sensitive(has)
+        g.add(self.denoise_row)
         return g
 
     def _update_codec(self):

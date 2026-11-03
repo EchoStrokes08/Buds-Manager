@@ -77,6 +77,9 @@ cuando el celular tiene el control):
 - **Avisos de batería**: notificación al bajar a 20 % y a 10 % (crítica), y cuando terminan de cargar.
 - **Salida automática**: al quitarte los dos audífonos el audio pasa a las bocinas de la PC; al ponerte
   uno vuelve a los audífonos (si no elegiste otra salida mientras tanto).
+- **Sin ruido de fondo en llamadas** (`buds auto ruido on|off`): mientras una llamada usa el micrófono de
+  los audífonos, el servicio arranca un filtro RNNoise de PipeWire y pasa la app al micrófono
+  «Micrófono de los audífonos (sin ruido)»; se cierra al colgar. Requiere `noise-suppression-for-voice`.
 - **¿Guardaste los audífonos?**: aviso si se desconectan de la PC estando afuera (ni puestos ni en el
   estuche), o si llevan 10 min afuera sin usar. Si te los llevas puestos no avisa.
 - **Micrófono solo en llamadas** (`buds mic calls|any|never`, o en Conexión): usar el micrófono de unos
@@ -90,7 +93,7 @@ cuando el celular tiene el control):
 
 ```
 buds auto                 # ver qué está activo
-buds auto pausa off       # salida | pausa | reanudar | bateria | estuche  on|off
+buds auto pausa off       # salida | pausa | reanudar | bateria | estuche | ruido  on|off
 ```
 
 Se guarda en `~/.config/redmi-buds/config.json` (también `low_levels`, por defecto `[20, 10]`).

@@ -17,6 +17,7 @@ import threading
 import time
 
 from . import audio
+from .denoise import Denoiser
 from .automations import load_config, log, notify
 
 MODES = {"calls": "Solo en llamadas", "any": "Con cualquier app", "never": "Nunca"}
@@ -30,6 +31,8 @@ RELEASE_DELAY = 3.0     # seconds without call recordings before going back to m
 
 
 def is_call(rec, extra=()):
+    if "denoised" in rec.get("name", "") or rec["app"].lower().startswith("pipewire"):
+        return False
     if rec["role"].lower() in CALL_ROLES:
         return True
     hay = f"{rec['app']} {rec['binary']}".lower()
@@ -42,6 +45,8 @@ class CallMic:
         self.mode = None
         self.switched = None             # (mac, music profile, previous default source) while we hold HFP
         self.last_call = 0
+        self.denoiser = Denoiser()
+        self.call_source = None          # where call apps record from while switched (clean or raw mic)
         self._kick = threading.Event()
 
     def start(self):
@@ -98,15 +103,21 @@ class CallMic:
             if not self.switched:
                 self._engage(mac, calls)
             else:
-                mic = audio.buds_mic(mac)
-                for r in calls:
-                    if mic and r["source"] is not None:
-                        audio.move_recording(r["index"], mic)
+                self._move(calls)
         elif self.switched:
             if time.time() - self.last_call >= RELEASE_DELAY:
                 self._release()
             else:
                 threading.Timer(RELEASE_DELAY, self._kick.set).start()
+
+    def _move(self, calls):
+        """Points the call apps' recordings at the call mic (clean one when the filter runs)."""
+        if not self.call_source:
+            return
+        sources = {s["index"]: s["name"] for s in audio._json("list", "sources")}
+        for r in calls:
+            if sources.get(r["source"]) != self.call_source:
+                audio.move_recording(r["index"], self.call_source)
 
     def _engage(self, mac, calls):
         _, active = audio.profiles(mac)
@@ -128,9 +139,10 @@ class CallMic:
                 break
             time.sleep(0.2)
         if mic:
-            audio.set_default_source(mic)
-            for r in calls:
-                audio.move_recording(r["index"], mic)
+            clean = self.denoiser.start(mic) if load_config().get("call_denoise", True) else None
+            self.call_source = clean or mic
+            audio.set_default_source(self.call_source)
+            self._move(calls)
         apps = ", ".join(sorted({r["app"] or r["binary"] for r in calls}))
         log("micrófono: llamada en", apps, "→ perfil", hfp)
         notify("Micrófono de los audífonos activado", f"Llamada en {apps}. Al terminar vuelve la calidad de música.")
@@ -138,6 +150,8 @@ class CallMic:
     def _release(self):
         mac, music, prev_src = self.switched
         self.switched = None
+        self.call_source = None
+        self.denoiser.stop()
         try:
             audio.ensure_music(mac, prefer=music)
         except RuntimeError as e:
