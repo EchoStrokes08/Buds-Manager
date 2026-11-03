@@ -228,6 +228,17 @@ tiene el control.
 - LE Audio: el adaptador de la PC lo soporta (CIS/ISO), pero los 8 Pro (firmware 3.2.2.6) no anuncian
   servicios LE Audio (sin `184e`/`1850`/`1853` en un escaneo LE, 2026-11-03).
 
+## Pruebas
+
+```
+python3 -m unittest discover -s tests
+```
+
+Solo usan la biblioteca estándar y carpetas temporales (no tocan tu configuración). Cubren la
+decodificación del protocolo, perfiles por app, temporizador, salida automática, avisos de estuche,
+historial de batería, exposición, ecualizador de la PC y detección de llamadas. Corren en GitHub Actions
+con cada push.
+
 ## Licencia
 
 [AGPL-3.0-or-later](LICENSE), como Gadgetbridge, del que se portó el protocolo.

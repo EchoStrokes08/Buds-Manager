@@ -59,7 +59,8 @@ def save_config(cfg):
 
 
 def log(*a):
-    print(time.strftime("%H:%M:%S"), *a, flush=True)
+    if not os.environ.get("BUDS_QUIET"):
+        print(time.strftime("%H:%M:%S"), *a, flush=True)
 
 
 def notify(summary, body="", urgency="normal"):
