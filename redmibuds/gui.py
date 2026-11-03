@@ -635,7 +635,68 @@ class Window(Adw.ApplicationWindow):
             g.add(row)
         box.append(g)
         box.append(self._build_profiles())
+        box.append(self._build_exposure())
         return box
+
+    # ---------- listening dose ----------
+
+    def _build_exposure(self):
+        g = Adw.PreferencesGroup(
+            title="Salud auditiva",
+            description="Estimación de la dosis de sonido de los últimos 7 días según el límite de la OMS "
+                        "(80 dB durante 40 h a la semana). Se calcula con el volumen del sistema mientras "
+                        "llevas los audífonos puestos; no es una medición.")
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, css_classes=["card"])
+        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=14, margin_bottom=14,
+                        margin_start=14, margin_end=14)
+        self.dose_label = Gtk.Label(xalign=0, css_classes=["title-4"])
+        self.dose_bar = Gtk.LevelBar(min_value=0, max_value=1)
+        self.dose_bar.add_offset_value("low", 0.5)
+        self.dose_bar.add_offset_value("high", 0.8)
+        self.dose_bar.add_offset_value("full", 1.0)
+        self.dose_hint = Gtk.Label(xalign=0, wrap=True, css_classes=["caption", "dim-label"])
+        for w in (self.dose_label, self.dose_bar, self.dose_hint):
+            inner.append(w)
+        card.append(inner)
+        g.add(card)
+        lb = Gtk.ListBox(css_classes=["boxed-list"], selection_mode=Gtk.SelectionMode.NONE, margin_top=12)
+        self.today_row = Adw.ActionRow(title="Escucha hoy", subtitle="—")
+        self.level_row = Adw.ActionRow(title="Nivel estimado ahora", subtitle="—")
+        self.exp_switch = self._switch("Avisos de exposición", "Al 80 % y al 100 % del límite semanal",
+                                       lambda on: self._set_auto("exposure", on))
+        self.exp_switch.set_active(bool(autom.load_config().get("exposure", True)))
+        for r in (self.today_row, self.level_row, self.exp_switch):
+            lb.append(r)
+        g.add(lb)
+        self._refresh_exposure()
+        GLib.timeout_add_seconds(60, lambda: (self._refresh_exposure(), True)[1])
+        return g
+
+    def _refresh_exposure(self):
+        from . import exposure as ex
+        s = ex.summary()
+        week = s["week"]
+        self.dose_bar.set_value(min(week, 1.0))
+        self.dose_label.set_label(f"{week * 100:.0f} % del límite semanal")
+        if week >= 1:
+            hint = "Superaste la dosis segura de la semana: baja el volumen o descansa los oídos."
+        elif week >= 0.8:
+            hint = "Cerca del límite. Bajar 3 dB (unos pasos de volumen) duplica el tiempo seguro."
+        else:
+            hint = "Dentro de lo seguro."
+        self.dose_hint.set_label(hint)
+        m = int(s["today_min"])
+        self.today_row.set_subtitle(f"{m // 60} h {m % 60:02d} min con los audífonos puestos y sonando")
+
+        def fetch():
+            try:
+                lvl = (remote.call({"op": "state"}, timeout=3).get("exposure") or {}).get("level_now")
+            except (OSError, ValueError, p.BudsError):
+                lvl = None
+            text = (f"≈ {lvl:.0f} dB · seguro hasta {ex.safe_hours(lvl):.0f} h a la semana a este nivel"
+                    if lvl else "Sin sonido por los audífonos ahora")
+            GLib.idle_add(self.level_row.set_subtitle, text)
+        threading.Thread(target=fetch, daemon=True).start()
 
     # ---------- per-app profiles ----------
 

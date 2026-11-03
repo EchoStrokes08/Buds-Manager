@@ -208,6 +208,7 @@ class Holder:
         if op == "state":
             return {"sleep": self.sleep.status() if getattr(self, "sleep", None) else None,
                     "estimate": self.estimate,
+                    "exposure": self.exposure.status() if getattr(self, "exposure", None) else None,
                     "state": self.state, "holding": self.client is not None, "mac": self.mac,
                     "reason": self.reason, "reason_text": REASONS.get(self.reason),
                     "battery": self.basic if self.reason == "busy" else None}
@@ -285,6 +286,11 @@ def main():
                 d.set_mode(holder.client, mode)
         holder._refresh.set()
     holder.sleep = SleepTimer(set_mode)
+
+    from .exposure import Exposure
+    holder.exposure = Exposure(lambda: holder.mac or find_mac(),
+                               lambda: (holder.state or {}).get("wear") if holder.client else None)
+    holder.exposure.start()
 
     from .profiles import AppProfiles
     holder.profiles = AppProfiles(apply_profile, current_settings)

@@ -24,6 +24,8 @@ DEFAULTS = {
     "auto_output": True,       # both earbuds out -> PC speakers; back in -> earbuds
     "case_reminder": True,     # warn when the earbuds are left out of the case
     "call_mic": "calls",       # earbuds' mic: calls | any | never (see calls.py)
+    "exposure": True,          # listening-dose estimate and alerts (see exposure.py)
+    "ref_spl": 95.0,           # dB that typical music reaches at 100 % volume (exposure calibration)
     "call_denoise": True,      # RNNoise on the earbuds' mic during calls (see denoise.py)
     "call_apps": [],           # extra app names treated as call apps
     "app_profiles": [],        # per-app noise mode / EQ (see profiles.py)

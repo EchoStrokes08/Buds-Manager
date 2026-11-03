@@ -368,6 +368,16 @@ def cmd_auto(args):
     print(f"micrófono de los audífonos: {MODES.get(cfg['call_mic'], cfg['call_mic']).lower()}  (buds mic)")
 
 
+def cmd_exposicion(args):
+    from . import exposure as ex
+    s = ex.summary()
+    print(f"Esta semana: {s['week'] * 100:.0f} % de la dosis segura de la OMS (estimado)")
+    print(f"Hoy: {int(s['today_min']) // 60} h {int(s['today_min']) % 60:02d} min con los audífonos puestos")
+    for day, dose in s["days"]:
+        print(f"  {day}  {'█' * min(40, round(dose * 40))} {dose * 100:.0f} %")
+    print("Estimación con el volumen del sistema; calibra ref_spl en config.json (dB al 100 %).")
+
+
 def cmd_dormir(args):
     try:
         if args.minutes in ("off", "cancelar", "0"):
@@ -506,6 +516,8 @@ def build_parser():
     s.add_argument("what", nargs="?", choices=list(AUTO_KEYS))
     s.add_argument("state", nargs="?", choices=["on", "off"])
     s.set_defaults(fn=None)
+    sub.add_parser("exposicion", aliases=["exposure"], help="dosis de sonido de la semana (estimada)"
+                   ).set_defaults(fn=None)
     s = sub.add_parser("dormir", aliases=["sleep"], help="temporizador para dormir: buds dormir 30 | off")
     s.add_argument("minutes", nargs="?")
     s.set_defaults(fn=None)
@@ -531,6 +543,8 @@ def main(argv=None):
         return cmd_hold(args)
     if args.cmd == "auto":
         return cmd_auto(args)
+    if args.cmd in ("exposicion", "exposure"):
+        return cmd_exposicion(args)
     if args.cmd in ("dormir", "sleep"):
         return cmd_dormir(args)
     if args.cmd == "mic":
