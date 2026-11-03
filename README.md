@@ -1,244 +1,123 @@
 # Buds Manager
 
-Controla tus **REDMI Buds** desde Linux: cancelación de ruido, ecualizador, gestos, batería, prueba de
-ajuste, buscar audífonos y más, con una app GTK4/libadwaita, un ícono en la bandeja, un CLI y un servicio
-que automatiza cosas (pausa al quitártelos, perfiles por app, micrófono solo en llamadas con supresión de
-ruido…). No existe la app oficial de Xiaomi para Linux; esta habla directamente con los audífonos.
+**English** · [Español](README.es.md)
 
-Probado con **REDMI Buds 8 Pro** (firmware 3.2.2.6) en Arch Linux + Hyprland + PipeWire. Otros Redmi
-Buds que use [Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge) probablemente funcionen
-en lo básico (mismo protocolo), pero no están probados.
+Control your **REDMI Buds** from Linux: noise cancelling, equalizer, gestures, battery, fit test, find my
+earbuds and more — with a GTK4/libadwaita app, a tray icon, a CLI and a background service that automates
+things (pause when you take them out, per-app profiles, mic only for calls with noise suppression…).
+Xiaomi has no official app for Linux; this one talks to the earbuds directly.
 
-Usa el protocolo Xiaomi "MIWEAR" (RFCOMM canal 28, servicio `fd2d`), portado de Gadgetbridge.
+| Sound | PC equalizer | Per-app profiles | Gesture shortcuts | Battery history* |
+|---|---|---|---|---|
+| ![Sound](docs/screenshots/sonido.png) | ![PC equalizer](docs/screenshots/ecualizador-pc.png) | ![Profiles](docs/screenshots/perfiles.png) | ![Shortcuts](docs/screenshots/atajos.png) | ![Battery](docs/screenshots/bateria.png) |
 
-## Instalación
+<sub>The interface is in Spanish for now. *Chart with sample data.</sub>
 
-Requisitos: Python 3, BlueZ (`bluez-utils`), PipeWire con `pipewire-pulse` y WirePlumber, y para la app
-`python-gobject`, `gtk4` y `libadwaita`. Opcionales: `playerctl` (pausa automática, atajos) y
-`noise-suppression-for-voice` (quitar ruido en llamadas).
+Tested with **REDMI Buds 8 Pro** (firmware 3.2.2.6) on Arch Linux + Hyprland + PipeWire. Other Redmi Buds
+supported by [Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge) will probably work for the
+basics (same protocol), but are untested.
+
+It speaks Xiaomi's "MIWEAR" protocol (RFCOMM channel 28, service `fd2d`), ported from Gadgetbridge.
+
+## Install
+
+Requirements: Python 3, BlueZ (`bluez-utils`), PipeWire with `pipewire-pulse` and WirePlumber, and for the
+app `python-gobject`, `gtk4` and `libadwaita`. Optional: `playerctl` (auto-pause, shortcuts) and
+`noise-suppression-for-voice` (noise suppression in calls).
 
 ```
 git clone https://github.com/EchoStrokes08/Buds-Manager.git
 cd Buds-Manager
-./install.sh              # ./install.sh --uninstall para quitarlo
-buds hold on              # opcional: el servicio mantiene el control en esta PC
+./install.sh              # ./install.sh --uninstall to remove it
+buds hold on              # optional: the service keeps control of the earbuds on this PC
 ```
 
-El instalador enlaza `buds`, `buds-manager` y `buds-tray` en `~/.local/bin`, instala los servicios de
-usuario de systemd y el lanzador, y la regla udev de los gestos (con `sudo`).
+The installer links `buds`, `buds-manager` and `buds-tray` into `~/.local/bin`, installs the systemd user
+services and the launcher, a udev rule for gesture shortcuts and a sudo rule that only allows reading the
+Bluetooth signal strength (`btmgmt conn-info`, for the "hot or cold" finder).
 
-> No es un producto de Xiaomi ni está afiliado a Xiaomi. Úsalo bajo tu responsabilidad: escribe ajustes
-> en los audífonos con el mismo protocolo que la app oficial, y `buds backup` / `buds restore` guardan y
-> recuperan la configuración.
+> Not a Xiaomi product nor affiliated with Xiaomi. Use at your own risk: it writes settings to the earbuds
+> with the same protocol as the official app; `buds backup` / `buds restore` save and restore them.
 
-## Buds Manager (interfaz gráfica)
+## What it does
+
+**On the earbuds** (app tabs *Sound*, *Equalizer*, *Controls*, *Device*):
+- Battery of each earbud and the case, in-ear / in-case / out status.
+- Noise control: off / ANC (light, deep, smart) / transparency (regular, voice, ambient), adaptive and
+  personalized ANC, adaptive sound, *immersive commute* (plane / transit / train).
+- Factory EQ presets and a custom 10-band curve (±6 dB), plus a **hearing test** that builds a curve for
+  your ears (equal-loudness compensated, ISO 226).
+- Gestures: single/double/triple tap, long press (and which modes it cycles), swipe.
+- Ear detection, auto-answer, multipoint, fit test, find earbuds, model/firmware/serial, backups.
+
+**On the PC** (needs the service, `buds hold on`):
+- **Gesture shortcuts**: the earbuds' taps arrive as media keys; choose what the PC does with each one
+  (mic mute, ANC ↔ transparency, screenshot, any command).
+- **Auto-pause / resume** when you take an earbud out, and **audio output follows the earbuds** (both out →
+  PC speakers, back in → earbuds).
+- **Mic only for calls**: Bluetooth earbuds drop to call quality when their mic is used. The service only
+  switches for call apps (Discord, Zoom, Teams, Telegram, browsers…), moves the call to the earbuds' mic,
+  adds **RNNoise noise suppression**, and goes back to LDAC/AAC when you hang up.
+- **Per-app profiles**: noise mode, earbud EQ and PC EQ curve while an app is focused or playing; restored
+  when you leave it (unless you changed it by hand).
+- **PC equalizer**: 10 bands of ±12 dB, automatic pre-gain and left/right balance (PipeWire filter-chain),
+  with named curves; only in music mode.
+- **Battery history** with a time-left estimate and the monthly discharge rate (to notice wear).
+- **Hearing health**: estimated weekly sound dose against the WHO limit (80 dB for 40 h a week), with
+  alerts at 80 % and 100 %. It's an estimate from the system volume; calibrate `ref_spl` in `config.json`.
+- **Sleep timer** (fade out, pause, ANC off), **"did you put them away?"** alerts, low-battery and
+  fully-charged notifications, **"hot or cold" finder** (Bluetooth signal strength while they beep).
+- **Codec** (LDAC / AAC / calls) and LDAC quality, Bluetooth device manager.
+- **Tray icon** (StatusNotifierItem: Waybar, KDE…): battery, mode, EQ, sleep timer; scroll to change mode.
+
+## CLI
 
 ```
-buds-manager
-```
-
-También aparece como **Buds Manager** en el lanzador (fuzzel) y se abre con clic central en el módulo de Waybar.
-GTK4 + libadwaita, cinco pestañas:
-
-- **Sonido**: batería de cada auricular y del estuche, modo (apagado / cancelación / transparencia),
-  intensidad de la cancelación o tipo de transparencia, ANC adaptativo, ANC personalizado, sonido adaptativo.
-- **Ecualizador**: perfiles de fábrica y curva de 10 bandas (−6..+6 dB) con curvas rápidas.
-- **Controles**: acción de 1, 2 y 3 toques y de mantener pulsado por auricular, y qué modos recorre.
-- **Dispositivo**: detección de oído, respuesta automática, prueba de ajuste de almohadillas, buscar auriculares,
-  modelo/firmware/número de serie, copias de seguridad y restaurar la configuración original.
-- **Sonido** también incluye *Viaje inmersivo* (avión / transporte público / tren) y los niveles de
-  cancelación del 8 Pro (ligera / profunda + cancelación inteligente).
-- **Controles** incluye *Deslizar* (ajustar volumen / nada).
-- **Conexión**: códec en esta PC (LDAC / AAC / llamadas con micrófono) y calidad LDAC (regla de WirePlumber), multipunto (escuchar en dos dispositivos) y gestor Bluetooth: buscar, emparejar,
-  conectar, desconectar y olvidar dispositivos (BlueZ por D-Bus). También aparece si los audífonos no están conectados.
-
-Las tarjetas de batería indican si cada audífono está en el oído, en el estuche o fuera.
-
-Se actualiza sola cada 8 s con la ventana enfocada (45 s en segundo plano). Cada operación abre una sesión
-corta, así que el CLI, Waybar y los atajos siguen funcionando con la ventana abierta.
-
-## Uso del CLI
-
-```
-buds                         # estado completo
+buds                         # full status
 buds battery
-buds mode [off|anc|transparency|next|toggle] [--notify]
+buds mode [off|anc|transparency|next|toggle|flip] [--notify]
 buds strength anc light|deep
 buds strength transparency regular|voice|ambient
-buds adaptive-anc on|off
-buds commute off|airplane|transit|train
-buds gesture swipe left|right|both volume|none
-buds personalized-anc on|off
 buds eq [standard|voice|bass|treble|volume|custom|balanced]
-buds eq-band 62 +4           # una banda (-6..+6), activa el preset custom
-buds eq-curve 4 3 2 0 0 0 1 2 2 1
-buds gesture single|double|triple|long left|right|both <acción>
-buds cycle left|right|both anc-off|transparency-off|anc-transparency|all
-buds ear-detection|auto-answer|multipoint|adaptive-sound on|off
+buds eq-band 62 +4           # one band (-6..+6), switches to the custom preset
+buds gesture single|double|triple|long|swipe left|right|both <action>
+buds commute off|airplane|transit|train
+buds ear-detection|auto-answer|multipoint|adaptive-sound|adaptive-anc|personalized-anc on|off
 buds find [left|right|both|stop]
-buds backup [archivo] / buds restore [archivo]
-buds status --raw --json     # bytes sin decodificar, para investigar
+buds backup [file] / buds restore [file]
+buds hold on|off|status      # keep the earbuds' control channel on this PC
+buds auto [salida|pausa|reanudar|bateria|estuche|ruido] [on|off]
+buds mic calls|any|never     # when to use the earbuds' microphone
+buds atajos [key] [action]   # gesture shortcuts on the PC
+buds dormir 30|off           # sleep timer
+buds exposicion              # weekly sound dose
+buds status --raw --json     # undecoded bytes, for protocol research
 ```
 
-La configuración original está en `~/.local/state/redmi-buds/backup-initial.json`; `buds restore` la recupera.
+Settings live in `~/.config/redmi-buds/config.json`; history and backups in `~/.local/state/redmi-buds/`.
 
-## Ecualizador a tu oído
+## How it works (and its limits)
 
-En la pestaña Ecualizador, «Ajustar a tu oído» abre una prueba de tonos: suena un tono de referencia
-de 1 kHz y luego el de cada banda, y mueves la barra hasta que ambos suenen igual de fuerte. A esos
-ajustes se les resta la curva de igual sonoridad ISO 226:2003 (60 fon), porque el oído es menos
-sensible a los graves aunque los audífonos sean neutros; el resto se invierte, se centra en la
-mediana y se limita a ±6 dB. La curva se guarda en los audífonos como perfil «Personalizado». Si
-cierras la prueba sin guardar, se restaura el ecualizador anterior. Código: `hearing.py`,
-`hearing_gui.py`.
+- The control channel (RFCOMM 28) accepts **one client**. A connected Xiaomi phone (`com.xiaomi.bluetooth`)
+  grabs it and never lets go, so the PC can't change settings while the phone holds it. With `buds hold on`
+  a service takes the channel as soon as the earbuds reach the PC and keeps it; the phone keeps playing
+  audio, but its earbuds menu loses control. Channel 17 is an unauthenticated info service that gives the
+  battery even while the phone holds channel 28.
+- Spatial audio can't be enabled from the PC: the earbuds reject it unless it comes from the phone, which
+  renders it.
+- LE Audio: the PC adapter may support it, but the 8 Pro (firmware 3.2.2.6) advertise no LE Audio services.
 
-## Automatizaciones (servicio en segundo plano)
+The protocol notes (config IDs decoded from Xiaomi app captures) are in the [Spanish README](README.es.md).
 
-Las ejecuta `buds-manager-daemon` mientras tiene el control (los avisos de batería también funcionan
-cuando el celular tiene el control):
-
-- **Pausa automática**: al quitarte un audífono se pausa lo que esté sonando en la PC (vía `playerctl`),
-  solo si el audio sale por los audífonos. Al ponértelo de nuevo se reanuda únicamente lo que se pausó
-  (si fue hace menos de 15 min).
-- **Avisos de batería**: notificación al bajar a 20 % y a 10 % (crítica), y cuando terminan de cargar.
-- **Salida automática**: al quitarte los dos audífonos el audio pasa a las bocinas de la PC; al ponerte
-  uno vuelve a los audífonos (si no elegiste otra salida mientras tanto).
-- **Sin ruido de fondo en llamadas** (`buds auto ruido on|off`): mientras una llamada usa el micrófono de
-  los audífonos, el servicio arranca un filtro RNNoise de PipeWire y pasa la app al micrófono
-  «Micrófono de los audífonos (sin ruido)»; se cierra al colgar. Requiere `noise-suppression-for-voice`.
-- **¿Guardaste los audífonos?**: aviso si se desconectan de la PC estando afuera (ni puestos ni en el
-  estuche), o si llevan 10 min afuera sin usar. Si te los llevas puestos no avisa.
-- **Micrófono solo en llamadas** (`buds mic calls|any|never`, o en Conexión): usar el micrófono de unos
-  audífonos Bluetooth baja la música a calidad de llamada. WirePlumber lo hacía con *cualquier* app que
-  grabara, porque los audífonos eran el micrófono predeterminado. En modo `calls` el servicio apaga el
-  cambio automático de WirePlumber, deja el micrófono de la PC como predeterminado y solo cambia al
-  perfil de llamada cuando graba una app de llamadas (Discord, Zoom, Teams, Telegram, Signal, Slack,
-  navegadores…; añade otras en `call_apps`). Mueve esa grabación al micrófono de los audífonos y, 3 s
-  después de colgar, vuelve al códec de música que tenías. `any` = comportamiento de WirePlumber;
-  `never` = nunca usar el micrófono de los audífonos.
-
-```
-buds auto                 # ver qué está activo
-buds auto pausa off       # salida | pausa | reanudar | bateria | estuche | ruido  on|off
-```
-
-Se guarda en `~/.config/redmi-buds/config.json` (también `low_levels`, por defecto `[20, 10]`).
-
-## Atajos en esta PC (gestos → acciones)
-
-Los toques de los audífonos llegan a la PC como teclas multimedia (reproducir/pausar, siguiente,
-anterior, subir/bajar volumen), según lo que tenga asignado cada toque. El servicio toma ese dispositivo
-de entrada (`REDMI Buds 8 Pro (AVRCP)`) en exclusiva y ejecuta lo que elijas para cada tecla: la acción
-normal, silenciar el micrófono, cambiar cancelación ↔ transparencia, captura de pantalla, nada o
-cualquier comando. Solo actúa cuando el audio sale por esta PC; el celular no cambia.
-
-Se configura en **Controles → Atajos en esta PC** o con:
-
-```
-buds atajos                                   # ver la tabla y si está escuchando
-buds atajos previous mic-mute                 # triple toque «anterior» → silenciar micrófono
-buds atajos next "cmd:hyprctl dispatch workspace +1"
-buds atajos next next                         # volver a lo normal
-```
-
-Necesita el servicio activo (`buds hold on`) y la regla udev para leer `/dev/input`:
-`sudo cp 70-redmi-buds.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger`.
-
-## Integración
-
-- Waybar: módulo `custom/buds` (clic: siguiente modo, clic derecho: ANC/apagado, clic central: Buds Manager).
-- Hyprland: `SUPER+B` siguiente modo, `SUPER+SHIFT+B` ANC/apagado.
-- **Bandeja** (`buds-tray`, servicio `buds-tray.service` ligado a la sesión gráfica): ícono en la bandeja de
-  Waybar (StatusNotifierItem). Clic: abre Buds Manager. Menú: batería, modo de ruido, ecualizador.
-  Tooltip con modo y batería. Instalar: `cp buds-tray.service ~/.config/systemd/user/ &&
-  systemctl --user enable --now buds-tray`.
-
-## Más funciones del servicio
-
-- **Temporizador para dormir** (`buds dormir 30|off`, o el menú de la bandeja): en los últimos minutos baja
-  el volumen poco a poco, pausa y apaga la cancelación; luego restaura el volumen.
-- **Rueda del mouse sobre el ícono de la bandeja**: cambia el modo de ruido.
-- **Historial de batería** (Dispositivo): gráfica de 48 h / 7 días, tiempo restante estimado (también en el
-  tooltip de la bandeja) y ritmo de descarga por mes para notar el desgaste. Se guarda en
-  `~/.local/state/redmi-buds/battery.csv`.
-- **Salud auditiva** (Sonido, `buds exposicion`): dosis de sonido de los últimos 7 días según la OMS
-  (80 dB durante 40 h a la semana), con avisos al 80 % y 100 %. Es una **estimación** con el volumen del
-  sistema; calíbrala con `ref_spl` en `config.json` (dB que alcanza la música al 100 %; 95 por defecto).
-- **Ecualizador de la PC** (Ecualizador): 10 bandas de ±12 dB, preganancia automática y balance
-  izquierda/derecha, con un filtro de PipeWire que crea la salida «REDMI Buds (ecualizador de la PC)».
-  Solo en modo música; se detiene en llamadas y vuelve al colgar. Los cambios se aplican en vivo.
-- **Buscar «frío o caliente»** (Dispositivo → Buscar audífonos): los hace sonar y muestra la intensidad de
-  la señal Bluetooth para saber si te acercas. Leerla requiere root; `install.sh` agrega una regla de sudo
-  que permite solo `btmgmt conn-info` (`71-redmi-buds-rssi.sudoers`).
-
-## Perfiles por app
-
-En **Sonido → Perfiles por app** (o `app_profiles` en `config.json`): cambia el control de ruido y/o el
-ecualizador mientras usas una app, y al dejarla lo devuelve como estaba (salvo que lo hayas cambiado a mano).
-
-- **En primer plano**: mientras su ventana está enfocada (clase de ventana de Hyprland; espera 1,5 s para
-  no saltar con cada alt-tab).
-- **Mientras suena**: mientras la app reproduce audio, aunque esté detrás (flujos de PipeWire).
-- Si aplican los dos, gana el de primer plano. Lo ejecuta el servicio (`profiles.py`).
-
-```json
-"app_profiles": [
-  {"app": "spotify", "when": "playing", "mode": null, "eq": "bass"},
-  {"app": "zoom", "when": "focused", "mode": "transparency", "eq": "voice"}
-]
-```
-
-## Protocolo descubierto con la captura de la app Xiaomi (2026-11-01)
-
-| Config | Uso |
-|---|---|
-| `0x05` = 01 | inicia la prueba de ajuste; resultado por notificación de `0x06` (izq, der): 03 midiendo, 01 bien |
-| `0x0c` | bits 0/1 izq/der en estuche, bits 2/3 izq/der en el oído |
-| `0x28` | sincroniza la hora (timestamp Unix de 4 bytes) |
-| `0x76` = 01 | la app lo envía al abrirse |
-| `0x67` | viaje inmersivo: 0 off, 1 avión, 2 transporte, 3 tren |
-| `0x1d` → `0x1e` | audio espacial: 02 off, 03 on, 0b on + seguimiento de cabeza. **Rechazado (estado 9) si no viene del celular**: el render lo hace el celular |
-| `0x68` | motor espacial: 0 Xiaomi dimensional, 1 Dolby |
-| `0x0b` (ANC) | 8 Pro: 01 ligera, 12 profunda (13 al entrar a ANC); `0x25` = cancelación inteligente |
-| gesto `0x05` | deslizar: 0b volumen, 08 nada |
-| `0x36` | [activo, nivel 1–5] del audio espacial (se activa con `0x1d`); inútil en la PC |
-| `0x75`, `0x23`, `0x66` | sin identificar |
-
-**Mantener el control en esta PC** (`buds hold on|off`, o el interruptor en la pestaña Conexión): activa
-`buds-manager-daemon.service` (systemd de usuario), que toma el canal en cuanto los audífonos llegan a la PC,
-reintenta cada segundo si el celular lo tiene y lo conserva aunque el celular se reconecte (probado). CLI, Waybar
-y la app le hablan por `$XDG_RUNTIME_DIR/redmi-buds.sock`; los cambios hechos con gestos llegan al instante.
-El celular sigue reproduciendo, pero su menú de los audífonos queda sin control.
-
-Las lecturas piden varios ajustes por petición, como la app de Xiaomi (pedirlos uno a uno hacía que los
-audífonos ignoraran los últimos).
-
-**Límite de hardware:** el canal de control (RFCOMM 28) acepta un solo cliente. En un celular Xiaomi conectado,
-el servicio `com.xiaomi.bluetooth` lo ocupa todo el tiempo, así que la PC no puede cambiar ajustes hasta que los
-audífonos se desconecten del celular. El audio por multipunto no se ve afectado. El canal 17 es un servicio de información
-básica sin autenticación que acepta varios clientes: al conectar envía tramas `03 <id> <len16> <dato>` con
-id 01 = modelo (`11728a`), 02 = MAC, 03 = batería izq/der/estuche (mismo formato que GET_DEVICE_INFO).
-El celular solo le manda `03 08 0002 0124`. Buds Manager lo usa para mostrar la batería cuando el celular
-tiene el control.
-
-## Pendiente
-
-- Gesto tipo `0x05` con acción `0x0b` (propio de los 8 Pro, sin identificar).
-- Modo juego y configs `0x75`, `0x23`, `0x66`: requieren otra captura de la app Xiaomi en Android.
-- LE Audio: el adaptador de la PC lo soporta (CIS/ISO), pero los 8 Pro (firmware 3.2.2.6) no anuncian
-  servicios LE Audio (sin `184e`/`1850`/`1853` en un escaneo LE, 2026-11-03).
-
-## Pruebas
+## Tests
 
 ```
 python3 -m unittest discover -s tests
 ```
 
-Solo usan la biblioteca estándar y carpetas temporales (no tocan tu configuración). Cubren la
-decodificación del protocolo, perfiles por app, temporizador, salida automática, avisos de estuche,
-historial de batería, exposición, ecualizador de la PC y detección de llamadas. Corren en GitHub Actions
-con cada push.
+Standard library only, temporary directories (your config is never touched). They run on GitHub Actions on
+every push.
 
-## Licencia
+## License
 
-[AGPL-3.0-or-later](LICENSE), como Gadgetbridge, del que se portó el protocolo.
+[AGPL-3.0-or-later](LICENSE), like Gadgetbridge, from which the protocol was ported.

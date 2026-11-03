@@ -1290,11 +1290,14 @@ class Window(Adw.ApplicationWindow):
         btns.attach(stop, 1, 1, 1, 1)
         g.add(btns)
         hot = Adw.ActionRow(title="Frío o caliente", subtitle="Suenan y una barra te dice si te acercas",
-                            activatable=True, margin_top=12, css_classes=["card"])
+                            activatable=True)
         hot.add_prefix(Gtk.Image(icon_name="find-location-symbolic"))
         hot.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
         hot.connect("activated", lambda *_: self._finder())
-        g.add(hot)
+        # its own list: rows added straight to the group would sit above the buttons
+        hot_list = Gtk.ListBox(css_classes=["boxed-list"], selection_mode=Gtk.SelectionMode.NONE, margin_top=12)
+        hot_list.append(hot)
+        g.add(hot_list)
         box.append(g)
 
         g = Adw.PreferencesGroup(title="Información")
