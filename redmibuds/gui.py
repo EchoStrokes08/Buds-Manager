@@ -22,6 +22,7 @@ from . import remote  # noqa: E402
 from . import gestures as gest  # noqa: E402
 from . import automations as autom  # noqa: E402
 from .calls import MODES as MIC_MODES  # noqa: E402
+from . import profiles as appprof  # noqa: E402
 from .cli import hold_enabled, set_hold  # noqa: E402
 from .cli import INITIAL_BACKUP, STATE_DIR, find_mac, refresh_waybar, save_backup, _freq_label  # noqa: E402
 
@@ -633,7 +634,134 @@ class Window(Adw.ApplicationWindow):
             self.bool_rows[key] = row
             g.add(row)
         box.append(g)
+        box.append(self._build_profiles())
         return box
+
+    # ---------- per-app profiles ----------
+
+    def _build_profiles(self):
+        self.prof_group = Adw.PreferencesGroup(
+            title="Perfiles por app",
+            description="Cambia el control de ruido o el ecualizador mientras usas una app, y lo devuelve "
+                        "como estaba al dejarla. «En primer plano» gana a «Mientras suena».")
+        add = Gtk.Button(icon_name="list-add-symbolic", tooltip_text="Nuevo perfil", valign=Gtk.Align.CENTER)
+        add.add_css_class("flat")
+        add.connect("clicked", lambda *_: self._edit_profile(None))
+        self.prof_group.set_header_suffix(add)
+        self._prof_rows = []
+        self._fill_profiles()
+        return self.prof_group
+
+    def _fill_profiles(self):
+        for r in self._prof_rows:
+            self.prof_group.remove(r)
+        self._prof_rows = []
+        profs = autom.load_config().get("app_profiles") or []
+        if not profs:
+            r = Adw.ActionRow(title="Sin perfiles", subtitle="Pulsa + para crear uno (por ejemplo: Spotify con "
+                                                             "más graves, Zoom con transparencia)")
+            self.prof_group.add(r)
+            self._prof_rows.append(r)
+            return
+        modes, eqs = dict((k, l) for k, l, _ in MODE_INFO), dict(EQ_LABELS)
+        for i, pr in enumerate(profs):
+            parts = [appprof.WHEN.get(pr.get("when"), "")]
+            if pr.get("mode"):
+                parts.append(modes.get(pr["mode"], pr["mode"]))
+            if pr.get("eq"):
+                parts.append("EQ " + eqs.get(pr["eq"], pr["eq"]))
+            r = Adw.ActionRow(title=GLib.markup_escape_text(pr.get("app", "?")), subtitle=" · ".join(parts),
+                              activatable=True)
+            r.connect("activated", lambda _r, i=i: self._edit_profile(i))
+            rm = Gtk.Button(icon_name="user-trash-symbolic", tooltip_text="Eliminar", valign=Gtk.Align.CENTER)
+            rm.add_css_class("flat")
+            rm.connect("clicked", lambda _b, i=i: self._save_profile(i, None))
+            r.add_suffix(rm)
+            r.add_suffix(Gtk.Image.new_from_icon_name("go-next-symbolic"))
+            self.prof_group.add(r)
+            self._prof_rows.append(r)
+
+    def _save_profile(self, index, prof):
+        cfg = autom.load_config()
+        profs = list(cfg.get("app_profiles") or [])
+        if index is None:
+            profs.append(prof)
+        elif prof is None:
+            profs.pop(index)
+        else:
+            profs[index] = prof
+        cfg["app_profiles"] = profs
+        try:
+            autom.save_config(cfg)
+        except OSError as e:
+            self.toast(f"⚠ {e}", 4)
+        self._fill_profiles()
+
+    def _edit_profile(self, index):
+        profs = autom.load_config().get("app_profiles") or []
+        pr = dict(profs[index]) if index is not None else {"app": "", "when": "playing", "mode": None, "eq": None}
+        dlg = Adw.Dialog(title="Perfil de app" if index is not None else "Nuevo perfil", content_width=420)
+        tv = Adw.ToolbarView()
+        hb = Adw.HeaderBar(show_end_title_buttons=False, show_start_title_buttons=False)
+        cancel = Gtk.Button(label="Cancelar")
+        cancel.connect("clicked", lambda *_: dlg.close())
+        save = Gtk.Button(label="Guardar")
+        save.add_css_class("suggested-action")
+        hb.pack_start(cancel)
+        hb.pack_end(save)
+        tv.add_top_bar(hb)
+        page = Adw.PreferencesPage()
+        g = Adw.PreferencesGroup(description="Elige una app abierta o escribe parte de su nombre "
+                                             "(por ejemplo «spotify», «zoom», «firefox»). «En primer plano»: "
+                                             "con su ventana enfocada; «Mientras suena»: aunque esté detrás.")
+        apps = appprof.window_classes()
+        if pr["app"] and pr["app"] not in apps:
+            apps.insert(0, pr["app"])
+        app_entry = Adw.EntryRow(title="App", text=pr["app"])
+        if apps:
+            app_combo = Adw.ComboRow(title="Apps abiertas", model=Gtk.StringList.new(["—"] + apps))
+            app_combo.connect("notify::selected", lambda r, _: r.get_selected() > 0 and app_entry.set_text(
+                apps[r.get_selected() - 1]))
+            g.add(app_combo)
+        g.add(app_entry)
+        when_pairs = list(appprof.WHEN.items())
+        when = self._plain_combo("Cuándo", when_pairs, pr.get("when"))
+        g.add(when)
+        page.add(g)
+        g2 = Adw.PreferencesGroup(title="Qué cambiar")
+        mode = self._plain_combo("Control de ruido", [(None, "Sin cambiar")] + [(k, l) for k, l, _ in MODE_INFO],
+                                 pr.get("mode"))
+        eq = self._plain_combo("Ecualizador", [(None, "Sin cambiar")] + EQ_LABELS, pr.get("eq"))
+        g2.add(mode)
+        g2.add(eq)
+        page.add(g2)
+        tv.set_content(page)
+        dlg.set_child(tv)
+
+        def do_save(*_):
+            app = app_entry.get_text().strip()
+            if not app:
+                self.toast("Escribe o elige una app")
+                return
+            new = {"app": app, "when": when.pairs[when.get_selected()][0],
+                   "mode": mode.pairs[mode.get_selected()][0], "eq": eq.pairs[eq.get_selected()][0]}
+            if not new["mode"] and not new["eq"]:
+                self.toast("Elige al menos qué cambiar")
+                return
+            self._save_profile(index, new)
+            self.toast(f"Perfil de {app} guardado")
+            dlg.close()
+        save.connect("clicked", do_save)
+        dlg.present(self)
+
+    @staticmethod
+    def _plain_combo(title, pairs, selected):
+        row = Adw.ComboRow(title=title, model=_string_list(pairs))
+        row.pairs = pairs
+        for i, (k, _) in enumerate(pairs):
+            if k == selected:
+                row.set_selected(i)
+        return row
 
     def _set_mode(self, mode):
         if not mode:
