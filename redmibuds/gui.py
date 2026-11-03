@@ -26,7 +26,7 @@ from . import profiles as appprof  # noqa: E402
 from .cli import hold_enabled, set_hold  # noqa: E402
 from .cli import INITIAL_BACKUP, STATE_DIR, find_mac, refresh_waybar, save_backup, _freq_label  # noqa: E402
 
-APP_ID = "io.github.oscar.BudsManager"
+APP_ID = "io.github.echostrokes08.BudsManager"
 POLL_ACTIVE = 8      # seconds between refreshes while the window has focus
 POLL_IDLE = 45
 

@@ -1,9 +1,35 @@
-# redmi-buds
+# Buds Manager
 
-Control de Redmi Buds (probado con **REDMI Buds 8 Pro**, firmware 3.2.2.6) desde Linux, sin dependencias: solo Python 3 y BlueZ.
+Controla tus **REDMI Buds** desde Linux: cancelación de ruido, ecualizador, gestos, batería, prueba de
+ajuste, buscar audífonos y más, con una app GTK4/libadwaita, un ícono en la bandeja, un CLI y un servicio
+que automatiza cosas (pausa al quitártelos, perfiles por app, micrófono solo en llamadas con supresión de
+ruido…). No existe la app oficial de Xiaomi para Linux; esta habla directamente con los audífonos.
 
-Usa el protocolo Xiaomi "MIWEAR" (RFCOMM canal 28, servicio `fd2d`), portado de
-[Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge) (GPL-3.0).
+Probado con **REDMI Buds 8 Pro** (firmware 3.2.2.6) en Arch Linux + Hyprland + PipeWire. Otros Redmi
+Buds que use [Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge) probablemente funcionen
+en lo básico (mismo protocolo), pero no están probados.
+
+Usa el protocolo Xiaomi "MIWEAR" (RFCOMM canal 28, servicio `fd2d`), portado de Gadgetbridge.
+
+## Instalación
+
+Requisitos: Python 3, BlueZ (`bluez-utils`), PipeWire con `pipewire-pulse` y WirePlumber, y para la app
+`python-gobject`, `gtk4` y `libadwaita`. Opcionales: `playerctl` (pausa automática, atajos) y
+`noise-suppression-for-voice` (quitar ruido en llamadas).
+
+```
+git clone https://github.com/EchoStrokes08/Buds-Manager.git
+cd Buds-Manager
+./install.sh              # ./install.sh --uninstall para quitarlo
+buds hold on              # opcional: el servicio mantiene el control en esta PC
+```
+
+El instalador enlaza `buds`, `buds-manager` y `buds-tray` en `~/.local/bin`, instala los servicios de
+usuario de systemd y el lanzador, y la regla udev de los gestos (con `sudo`).
+
+> No es un producto de Xiaomi ni está afiliado a Xiaomi. Úsalo bajo tu responsabilidad: escribe ajustes
+> en los audífonos con el mismo protocolo que la app oficial, y `buds backup` / `buds restore` guardan y
+> recuperan la configuración.
 
 ## Buds Manager (interfaz gráfica)
 
@@ -183,3 +209,7 @@ tiene el control.
 - Modo juego y configs `0x75`, `0x23`, `0x66`: requieren otra captura de la app Xiaomi en Android.
 - LE Audio: el adaptador de la PC lo soporta (CIS/ISO), pero los 8 Pro (firmware 3.2.2.6) no anuncian
   servicios LE Audio (sin `184e`/`1850`/`1853` en un escaneo LE, 2026-11-03).
+
+## Licencia
+
+[AGPL-3.0-or-later](LICENSE), como Gadgetbridge, del que se portó el protocolo.

@@ -2,7 +2,7 @@
 from gi.repository import Gio, GLib
 
 BUS = "org.bluez"
-AGENT_PATH = "/io/github/oscar/BudsManager/agent"
+AGENT_PATH = "/io/github/echostrokes08/BudsManager/agent"
 AGENT_XML = """
 <node>
   <interface name="org.bluez.Agent1">
