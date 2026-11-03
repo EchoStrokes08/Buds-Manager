@@ -220,6 +220,26 @@ def main():
     holder.callmic = CallMic(lambda: holder.mac or find_mac())
     holder.callmic.start()
 
+    def apply_profile(changes):
+        with holder.lock:
+            if holder.client is None:
+                return
+            if "mode" in changes:
+                d.set_mode(holder.client, changes["mode"])
+            if "eq" in changes:
+                d.set_eq_preset(holder.client, changes["eq"])
+        holder._refresh.set()
+
+    def current_settings():
+        st = holder.state
+        if holder.client is None or not st:
+            return None
+        return {"mode": st.get("mode"), "eq": st.get("eq_preset")}
+
+    from .profiles import AppProfiles
+    holder.profiles = AppProfiles(apply_profile, current_settings)
+    holder.profiles.start()
+
     class Handler(socketserver.StreamRequestHandler):
         def handle(self):
             try:

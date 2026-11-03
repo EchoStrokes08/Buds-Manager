@@ -24,6 +24,7 @@ DEFAULTS = {
     "auto_output": True,       # both earbuds out -> PC speakers; back in -> earbuds
     "call_mic": "calls",       # earbuds' mic: calls | any | never (see calls.py)
     "call_apps": [],           # extra app names treated as call apps
+    "app_profiles": [],        # per-app noise mode / EQ (see profiles.py)
     "low_levels": [20, 10],
     "gesture_actions": {},     # media key from the earbuds -> PC action (see gestures.py)
 }
