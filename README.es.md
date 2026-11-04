@@ -46,8 +46,7 @@ buds-manager
 ```
 
 También aparece como **Buds Manager** en el lanzador de aplicaciones. GTK4 + libadwaita con el tema **Ayu** oscuro (o el del sistema, desde el menú) e ilustraciones de los
-audífonos y el estuche en su color (negro obsidiana, blanco nube o azul glaciar; menú → *Color de los
-audífonos*). Cinco pestañas:
+audífonos y el estuche en negro obsidiana. Cinco pestañas:
 
 - **Sonido**: batería de cada auricular y del estuche, modo (apagado / cancelación / transparencia),
   intensidad de la cancelación o tipo de transparencia, ANC adaptativo, ANC personalizado, sonido adaptativo.

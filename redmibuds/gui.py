@@ -1299,10 +1299,6 @@ class Window(Adw.ApplicationWindow):
         menu.append("Guardar configuración", "win.backup")
         menu.append("Restaurar original", "win.restore-initial")
         menu.append("Tema Ayu (oscuro)", "app.ayu-theme")
-        colors = Gio.Menu()
-        for key, pal in theme.BUDS_COLORS.items():
-            colors.append(pal["label"], f"app.buds-color::{key}")
-        menu.append_submenu("Color de los audífonos", colors)
         menu.append("Acerca de Buds Manager", "win.about")
         return Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu, primary=True)
 
@@ -1703,21 +1699,6 @@ class App(Adw.Application):
                 win.queue_draw()
         ayu.connect("activate", toggle_theme)
         self.add_action(ayu)
-        color = Gio.SimpleAction.new_stateful("buds-color", GLib.VariantType.new("s"),
-                                              GLib.Variant("s", theme.buds_color()))
-
-        def set_color(action, value):
-            action.set_state(value)
-            cfg = load_config()
-            cfg["buds_color"] = value.get_string()
-            save_config(cfg)
-            win = self.props.active_window
-            for card in getattr(win, "batt", {}).values():
-                card.art.queue_draw()
-            from .cli import make_waybar_icons
-            make_waybar_icons()
-        color.connect("activate", set_color)
-        self.add_action(color)
         quit_ = Gio.SimpleAction(name="quit")
         quit_.connect("activate", lambda *_: self.quit())
         self.add_action(quit_)

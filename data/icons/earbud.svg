@@ -1,192 +1,166 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- REDMI Buds 8 Pro earbud, front view like the official app: straight stem on the outer side, bulbous
-       head, silicone tip facing the other earbud. Drawn for the left one; @flip@ mirrors the body for the
-       right one while the side letter (@letter@) stays readable. @tokens@ = palette (art.BUDS_COLORS).
-       Realism comes from real lighting: the body's alpha is blurred into a height map and lit with
-       feSpecularLighting/feDiffuseLighting, plus ambient occlusion, rim light and a fine satin grain.
-       Everything inside <g id="shadow"> is dropped for the compact bar icons (art.bar_icon). -->
+  <!-- REDMI Buds 8 Pro earbud, three-quarter view as in the official product shot: glossy egg-shaped
+       head, silicone tip (with the gold acoustic mesh) facing the viewer, round stem going down with the
+       side letter. Geometry is traced in photo pixels (inner group transform) and drawn as the LEFT
+       bud; the flip placeholder (art.svg_for) mirrors it into the RIGHT one. The stem is centred on x=64, so the letter and the shadow need no per-side x.
+       Colors are fixed (Obsidian Black). Everything inside <g id="shadow"> is dropped for the
+       compact bar icons (art.bar_icon). -->
   <defs>
-    <path id="head" d="M 15 50 C 15 33 25 24 42 22 C 62 20 82 26 90 42 C 97 56 94 74 80 82 C 68 89 52 88 44 80 C 40 76 38 70 38 64 L 38 76 L 15 76 Z"/>
-    <rect id="stemr" x="15" y="34" width="23" height="84" rx="11.5"/>
-    <clipPath id="bodyclip"><use href="#head"/><use href="#stemr"/></clipPath>
+    <path id="head" d="M 380.0 660.0 C 378.7 647.0 383.8 635.5 392.0 622.0 C 400.2 608.5 416.0 590.8 429.0 579.0 C 442.0 567.2 457.5 558.3 470.0 551.0 C 482.5 543.7 491.7 539.5 504.0 535.0 C 516.3 530.5 530.2 526.3 544.0 524.0 C 557.8 521.7 573.5 520.3 587.0 521.0 C 600.5 521.7 613.3 524.5 625.0 528.0 C 636.7 531.5 648.0 537.0 657.0 542.0 C 666.0 547.0 672.0 552.0 679.0 558.0 C 686.0 564.0 693.2 571.3 699.0 578.0 C 704.8 584.7 708.8 589.5 714.0 598.0 C 719.2 606.5 725.8 618.0 730.0 629.0 C 734.2 640.0 737.3 653.8 739.0 664.0 C 740.7 674.2 741.3 678.2 740.0 690.0 C 738.7 701.8 735.7 721.7 731.0 735.0 C 726.3 748.3 719.2 759.0 712.0 770.0 C 704.8 781.0 695.8 792.0 688.0 801.0 C 680.2 810.0 673.8 816.2 665.0 824.0 C 656.2 831.8 645.8 840.7 635.0 848.0 C 624.2 855.3 613.3 862.7 600.0 868.0 C 586.7 873.3 570.8 878.0 555.0 880.0 C 539.2 882.0 519.2 885.0 505.0 880.0 C 490.8 875.0 482.5 870.0 470.0 850.0 C 457.5 830.0 441.7 785.0 430.0 760.0 C 418.3 735.0 408.3 716.7 400.0 700.0 C 391.7 683.3 381.3 673.0 380.0 660.0 Z"/>
+    <path id="tipshape" d="M 369.0 652.0 C 359.3 656.0 344.8 664.0 334.0 672.0 C 323.2 680.0 312.8 689.2 304.0 700.0 C 295.2 710.8 286.5 724.2 281.0 737.0 C 275.5 749.8 272.0 763.7 271.0 777.0 C 270.0 790.3 271.5 803.7 275.0 817.0 C 278.5 830.3 285.7 845.3 292.0 857.0 C 298.3 868.7 304.3 877.3 313.0 887.0 C 321.7 896.7 335.0 908.3 344.0 915.0 C 353.0 921.7 358.0 923.8 367.0 927.0 C 376.0 930.2 386.0 933.2 398.0 934.0 C 410.0 934.8 425.0 934.7 439.0 932.0 C 453.0 929.3 471.0 923.0 482.0 918.0 C 493.0 913.0 498.0 908.0 505.0 902.0 C 512.0 896.0 518.5 889.0 524.0 882.0 C 529.5 875.0 534.3 868.2 538.0 860.0 C 541.7 851.8 544.3 842.2 546.0 833.0 C 547.7 823.8 548.3 813.8 548.0 805.0 C 547.7 796.2 546.0 787.5 544.0 780.0 C 542.0 772.5 539.3 766.7 536.0 760.0 C 532.7 753.3 528.2 746.7 524.0 740.0 C 519.8 733.3 515.5 726.7 511.0 720.0 C 506.5 713.3 502.5 706.5 497.0 700.0 C 491.5 693.5 485.0 687.0 478.0 681.0 C 471.0 675.0 464.3 669.0 455.0 664.0 C 445.7 659.0 432.5 653.7 422.0 651.0 C 411.5 648.3 400.8 647.8 392.0 648.0 C 383.2 648.2 378.7 648.0 369.0 652.0 Z"/>
+    <path id="stem" d="M 483 830 L 483 1100 C 483 1160 515 1195 557.5 1195 C 600 1195 634 1160 634 1100 L 634 830 Z"/>
+    <clipPath id="headclip"><use href="#head"/></clipPath>
+    <clipPath id="stemclip"><use href="#stem"/></clipPath>
+    <clipPath id="tipclip"><use href="#tipshape"/></clipPath>
+    <clipPath id="boreclip"><path d="M 336.0 776.0 C 343.8 773.8 354.3 773.7 362.0 775.0 C 369.7 776.3 376.3 779.0 382.0 784.0 C 387.7 789.0 392.5 797.0 396.0 805.0 C 399.5 813.0 402.3 823.2 403.0 832.0 C 403.7 840.8 402.8 850.8 400.0 858.0 C 397.2 865.2 392.0 871.3 386.0 875.0 C 380.0 878.7 372.0 880.5 364.0 880.0 C 356.0 879.5 345.7 876.0 338.0 872.0 C 330.3 868.0 323.2 862.5 318.0 856.0 C 312.8 849.5 309.0 841.0 307.0 833.0 C 305.0 825.0 304.7 815.5 306.0 808.0 C 307.3 800.5 310.0 793.3 315.0 788.0 C 320.0 782.7 328.2 778.2 336.0 776.0 Z"/></clipPath>
 
-    <!-- base colour: soft vertical falloff (sky above, floor below) -->
-    <linearGradient id="base" gradientUnits="userSpaceOnUse" x1="0" y1="20" x2="0" y2="118">
-      <stop offset="0" stop-color="@hi@"/>
-      <stop offset="0.35" stop-color="@mid@"/>
-      <stop offset="1" stop-color="@lo@"/>
+    <!-- head: broad soft highlight low-centre, falling off to a near-black edge -->
+    <radialGradient id="headg" gradientUnits="userSpaceOnUse" cx="560" cy="694" r="148"
+                    gradientTransform="translate(560 694) scale(1 0.87) translate(-560 -694)">
+      <stop offset="0" stop-color="#9a9ea3" stop-opacity="1"/>
+      <stop offset="0.28" stop-color="#9a9ea3" stop-opacity="0.98"/>
+      <stop offset="0.42" stop-color="#9a9ea3" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#9a9ea3" stop-opacity="0.56"/>
+      <stop offset="0.78" stop-color="#9a9ea3" stop-opacity="0.3"/>
+      <stop offset="0.92" stop-color="#9a9ea3" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#9a9ea3" stop-opacity="0"/>
+    </radialGradient>
+    <!-- stem: cylinder — dark band left, bright core, dark band right, thin bounce light at the edge -->
+    <linearGradient id="stemg" gradientUnits="userSpaceOnUse" x1="483" y1="0" x2="634" y2="0">
+      <stop offset="0" stop-color="#9a9ea3" stop-opacity="0.25"/>
+      <stop offset="0.073" stop-color="#9a9ea3" stop-opacity="0.09"/>
+      <stop offset="0.126" stop-color="#9a9ea3" stop-opacity="0.01"/>
+      <stop offset="0.179" stop-color="#9a9ea3" stop-opacity="0.01"/>
+      <stop offset="0.232" stop-color="#9a9ea3" stop-opacity="0.15"/>
+      <stop offset="0.285" stop-color="#9a9ea3" stop-opacity="0.35"/>
+      <stop offset="0.338" stop-color="#9a9ea3" stop-opacity="0.49"/>
+      <stop offset="0.391" stop-color="#9a9ea3" stop-opacity="0.74"/>
+      <stop offset="0.444" stop-color="#9a9ea3" stop-opacity="0.9"/>
+      <stop offset="0.497" stop-color="#9a9ea3" stop-opacity="0.95"/>
+      <stop offset="0.55" stop-color="#9a9ea3" stop-opacity="0.93"/>
+      <stop offset="0.603" stop-color="#9a9ea3" stop-opacity="0.98"/>
+      <stop offset="0.656" stop-color="#9a9ea3" stop-opacity="0.89"/>
+      <stop offset="0.709" stop-color="#9a9ea3" stop-opacity="0.71"/>
+      <stop offset="0.762" stop-color="#9a9ea3" stop-opacity="0.44"/>
+      <stop offset="0.815" stop-color="#9a9ea3" stop-opacity="0.14"/>
+      <stop offset="0.868" stop-color="#9a9ea3" stop-opacity="0.0"/>
+      <stop offset="1" stop-color="#9a9ea3" stop-opacity="0.0"/>
     </linearGradient>
-    <!-- cylindrical stem: dark core, bright reflection band, bounce light on the far side -->
-    <linearGradient id="stemcyl" gradientUnits="userSpaceOnUse" x1="15" y1="0" x2="38" y2="0">
-      <stop offset="0" stop-color="#000" stop-opacity="0.45"/>
-      <stop offset="0.18" stop-color="#000" stop-opacity="0.05"/>
-      <stop offset="0.34" stop-color="#fff" stop-opacity="0.30"/>
-      <stop offset="0.44" stop-color="#fff" stop-opacity="0.06"/>
-      <stop offset="0.72" stop-color="#000" stop-opacity="0.22"/>
-      <stop offset="0.9" stop-color="#fff" stop-opacity="0.10"/>
-      <stop offset="1" stop-color="#000" stop-opacity="0.40"/>
-    </linearGradient>
-    <linearGradient id="stemfadein" gradientUnits="userSpaceOnUse" x1="0" y1="50" x2="0" y2="70">
-      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
-      <stop offset="1" stop-color="#fff" stop-opacity="1"/>
-    </linearGradient>
-    <mask id="stemmask" maskUnits="userSpaceOnUse" x="0" y="0" width="128" height="128">
-      <rect x="0" y="0" width="128" height="128" fill="url(#stemfadein)"/>
-    </mask>
-
-    <!-- mirror-chrome touch strip on the stem: sharp horizon reflection -->
-    <linearGradient id="chrome" gradientUnits="userSpaceOnUse" x1="0" y1="66" x2="0" y2="100">
-      <stop offset="0" stop-color="@ch1@"/>
-      <stop offset="0.16" stop-color="@ch2@"/>
-      <stop offset="0.30" stop-color="@ch3@"/>
-      <stop offset="0.47" stop-color="@ch5@"/>
-      <stop offset="0.48" stop-color="@ch4@"/>
-      <stop offset="0.62" stop-color="@ch3@"/>
-      <stop offset="0.86" stop-color="@ch6@"/>
-      <stop offset="1" stop-color="@ch5@"/>
-    </linearGradient>
-    <linearGradient id="chromeside" gradientUnits="userSpaceOnUse" x1="21" y1="0" x2="32" y2="0">
-      <stop offset="0" stop-color="#000" stop-opacity="0.55"/>
+    <!-- stem: occluded under the head, darkening towards the rounded end -->
+    <linearGradient id="stemv" gradientUnits="userSpaceOnUse" x1="0" y1="840" x2="0" y2="1195">
+      <stop offset="0" stop-color="#000" stop-opacity="0.85"/>
+      <stop offset="0.16" stop-color="#000" stop-opacity="0.25"/>
       <stop offset="0.3" stop-color="#000" stop-opacity="0"/>
-      <stop offset="0.75" stop-color="#000" stop-opacity="0"/>
-      <stop offset="1" stop-color="#000" stop-opacity="0.5"/>
+      <stop offset="0.76" stop-color="#000" stop-opacity="0"/>
+      <stop offset="0.88" stop-color="#000" stop-opacity="0.5"/>
+      <stop offset="0.94" stop-color="#000" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
     </linearGradient>
 
-    <!-- ambient occlusion where the ear tip sits on the head -->
-    <radialGradient id="ao" gradientUnits="userSpaceOnUse" cx="80" cy="74" r="24">
-      <stop offset="0" stop-color="#000" stop-opacity="0.65"/>
-      <stop offset="0.55" stop-color="#000" stop-opacity="0.25"/>
-      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    <!-- silicone tip: matte, lit on the upper front, dark underneath -->
+    <radialGradient id="tipg" gradientUnits="userSpaceOnUse" cx="418" cy="772" r="205">
+      <stop offset="0" stop-color="#4a4a4c"/>
+      <stop offset="0.45" stop-color="#2c2c2d"/>
+      <stop offset="1" stop-color="#141415"/>
     </radialGradient>
-    <!-- rim light: brighter towards the key light (upper left) -->
-    <linearGradient id="rim" gradientUnits="userSpaceOnUse" x1="10" y1="20" x2="95" y2="100">
-      <stop offset="0" stop-color="@edge@" stop-opacity="0.95"/>
-      <stop offset="0.45" stop-color="@edge@" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="@edge@" stop-opacity="0.08"/>
+    <linearGradient id="tipshade" gradientUnits="userSpaceOnUse" x1="380" y1="700" x2="470" y2="935">
+      <stop offset="0.45" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.55"/>
     </linearGradient>
-
-    <!-- silicone ear tip: matte, slightly translucent at the thin lip -->
-    <radialGradient id="tip" gradientUnits="userSpaceOnUse" cx="84" cy="62" r="30">
-      <stop offset="0" stop-color="@tiphi@"/>
-      <stop offset="0.55" stop-color="@tipmid@"/>
-      <stop offset="1" stop-color="@tiplo@"/>
+    <radialGradient id="boreg" gradientUnits="userSpaceOnUse" cx="345" cy="800" r="85">
+      <stop offset="0" stop-color="#000" stop-opacity="0.75"/>
+      <stop offset="0.6" stop-color="#000" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.2"/>
     </radialGradient>
-    <radialGradient id="bore" gradientUnits="userSpaceOnUse" cx="99" cy="74" r="12">
-      <stop offset="0" stop-color="#000" stop-opacity="0.95"/>
-      <stop offset="0.7" stop-color="#000" stop-opacity="0.75"/>
-      <stop offset="1" stop-color="#000" stop-opacity="0.15"/>
-    </radialGradient>
-    <pattern id="mesh" patternUnits="userSpaceOnUse" width="2.2" height="2.2">
-      <circle cx="1.1" cy="1.1" r="0.55" fill="#9aa0a8" fill-opacity="0.35"/>
+    <!-- gold acoustic mesh seen on the far wall of the nozzle -->
+    <linearGradient id="meshg" gradientUnits="userSpaceOnUse" x1="0" y1="776" x2="0" y2="875">
+      <stop offset="0" stop-color="#5a5446"/>
+      <stop offset="0.3" stop-color="#a39b80"/>
+      <stop offset="0.65" stop-color="#8b836b"/>
+      <stop offset="1" stop-color="#3c3830"/>
+    </linearGradient>
+    <pattern id="mesh" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(-25)">
+      <circle cx="4" cy="4" r="1.7" fill="#1f1d18" fill-opacity="0.85"/>
     </pattern>
-    <radialGradient id="mic" cx="0.4" cy="0.35" r="0.7">
-      <stop offset="0" stop-color="#3a3e44"/>
-      <stop offset="1" stop-color="#050607"/>
-    </radialGradient>
 
-    <!-- glossy body: height map from the silhouette, lit by a key light (spec) and a soft fill (diffuse) -->
-    <filter id="gloss" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="9" result="h"/>
-      <feSpecularLighting in="h" surfaceScale="14" specularConstant="1" specularExponent="@specexp@"
-                          lighting-color="#ffffff" result="spec0">
-        <fePointLight x="40" y="0" z="60"/>
-      </feSpecularLighting>
-      <feGaussianBlur in="spec0" stdDeviation="1.6" result="spec"/>
-      <feComposite in="spec" in2="SourceAlpha" operator="in" result="specin"/>
-      <feDiffuseLighting in="h" surfaceScale="14" diffuseConstant="1" lighting-color="#ffffff" result="diff0">
-        <feDistantLight azimuth="235" elevation="55"/>
-      </feDiffuseLighting>
-      <feGaussianBlur in="diff0" stdDeviation="1.6" result="diff"/>
-      <feComposite in="SourceGraphic" in2="diff" operator="arithmetic" k1="@diffk@" k2="@diffb@" k3="0" k4="0" result="shaded"/>
-      <feComposite in="shaded" in2="specin" operator="arithmetic" k1="0" k2="1" k3="@speck@" k4="0" result="lit"/>
-      <!-- satin micro texture -->
-      <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="7" result="noise"/>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="soft1" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
+    <filter id="soft2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2"/></filter>
+    <!-- satin micro texture of the painted shell -->
+    <filter id="satin" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.35" numOctaves="2" seed="7" result="noise"/>
       <feColorMatrix in="noise" type="matrix"
-                     values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0" result="grain"/>
+                     values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.10 0" result="grain"/>
       <feComposite in="grain" in2="SourceAlpha" operator="in" result="grainin"/>
-      <feBlend in="grainin" in2="lit" mode="overlay"/>
-    </filter>
-    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4"/></filter>
-    <filter id="soft1" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0.8"/></filter>
-    <filter id="tipshade" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="h"/>
-      <feSpecularLighting in="h" surfaceScale="10" specularConstant="0.6" specularExponent="9"
-                          lighting-color="#ffffff" result="spec0">
-        <fePointLight x="40" y="-10" z="60"/>
-      </feSpecularLighting>
-      <feGaussianBlur in="spec0" stdDeviation="1.6" result="spec"/>
-      <feComposite in="spec" in2="SourceAlpha" operator="in" result="specin"/>
-      <feComposite in="SourceGraphic" in2="specin" operator="arithmetic" k1="0" k2="1" k3="@tipspec@" k4="0"/>
+      <feBlend in="grainin" in2="SourceGraphic" mode="overlay"/>
     </filter>
   </defs>
 
-  <g id="shadow">
-    <ellipse cx="@shx@" cy="121" rx="17" ry="3.2" fill="#000" opacity="0.5" filter="url(#soft)"/>
-    <ellipse cx="@shx@" cy="120.5" rx="10" ry="1.6" fill="#000" opacity="0.55" filter="url(#soft1)"/>
-  </g>
+  <g id="shadow"></g>
 
   <g transform="@flip@">
-    <!-- lit body (head + stem molded into one piece) -->
-    <g filter="url(#gloss)">
-      <use href="#head" fill="url(#base)"/>
-      <use href="#stemr" fill="url(#base)"/>
+   <g transform="translate(64 10) scale(-0.16 0.16) translate(-557.5 -521)">
+    <!-- ===== stem ===== -->
+    <g filter="url(#satin)">
+      <use href="#stem" fill="#17181a"/>
+      <use href="#stem" fill="url(#stemg)"/>
+    </g>
+    <g clip-path="url(#stemclip)">
+      <rect x="470" y="830" width="180" height="370" fill="url(#stemv)"/>
+      <!-- soft specular streak down the bright core -->
+      <rect x="548" y="905" width="20" height="215" rx="10" fill="#fff" opacity="0.08" filter="url(#soft)"/>
+      <!-- seam of the bottom cap: two thin light edges and the talk mic -->
+      <path d="M 492 1146 C 500 1162 510 1174 520 1181" fill="none" stroke="#8a9097" stroke-opacity="0.75" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M 625 1146 C 617 1162 607 1174 597 1181" fill="none" stroke="#8a9097" stroke-opacity="0.75" stroke-width="2.6" stroke-linecap="round"/>
+      <ellipse cx="557.5" cy="1190" rx="15" ry="12" fill="#000" opacity="0.8"/>
+      <ellipse cx="557.5" cy="1192" rx="10" ry="7" fill="#3d4045"/>
+      <ellipse cx="557.5" cy="1194" rx="6" ry="3" fill="#8a9097" opacity="0.6" filter="url(#soft2)"/>
     </g>
 
-    <g clip-path="url(#bodyclip)">
-      <!-- stem curvature, fading into the head -->
-      <rect x="15" y="34" width="23" height="84" fill="url(#stemcyl)" mask="url(#stemmask)"/>
-      <!-- crease where stem meets head -->
-      <path d="M 38 64 C 38 70 40 76 44 80" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="2.4" filter="url(#soft1)"/>
-      <!-- ambient occlusion around the tip -->
-      <circle cx="80" cy="74" r="24" fill="url(#ao)"/>
-      <!-- underside of the head falls into shadow -->
-      <path d="M 44 80 C 52 88 68 89 80 82 C 88 77 92 70 94 62 L 98 98 L 40 98 Z" fill="#000" opacity="0.28" filter="url(#soft)"/>
-      <!-- environment reflection: soft window on the dome -->
-      <path d="M 30 33 C 38 26 52 24 62 26 C 56 27 44 30 36 37 Z" fill="#fff" opacity="@refl@" filter="url(#soft1)"/>
-      <!-- inner rim light -->
-      <path d="M 15 52 L 15 50 C 15 33 25 24 42 22 C 62 20 82 26 90 42 C 97 56 94 74 80 82 C 68 89 52 88 44 80 C 40 76 38 70 38 64 L 38 106.5 A 11.5 11.5 0 0 1 15 106.5 Z" fill="none" stroke="url(#rim)" stroke-opacity="@rima@" stroke-width="2.4"/>
+    <!-- ===== head ===== -->
+    <g filter="url(#satin)">
+      <use href="#head" fill="#17181a"/>
+      <use href="#head" fill="url(#headg)"/>
     </g>
-    <!-- crisp outer edge, only on the exposed contour -->
-    <path d="M 15 52 L 15 50 C 15 33 25 24 42 22 C 62 20 82 26 90 42 C 97 56 94 74 80 82 C 68 89 52 88 44 80 C 40 76 38 70 38 64 L 38 106.5 A 11.5 11.5 0 0 1 15 106.5 Z"
-          fill="none" stroke="@edge@" stroke-opacity="@edgea@" stroke-width="0.7"/>
-
-    <!-- mirror-chrome touch strip -->
-    <g opacity="@chroma@">
-      <rect x="22" y="66" width="9" height="34" rx="4.5" fill="url(#chrome)"/>
-      <rect x="22" y="66" width="9" height="34" rx="4.5" fill="url(#chromeside)"/>
+    <g clip-path="url(#headclip)">
+      <!-- underside falls into shadow where it overhangs the stem -->
+      <path d="M 470.0 850.0 C 476.7 841.7 498.3 869.2 520.0 870.0 C 541.7 870.8 576.7 864.2 600.0 855.0 C 623.3 845.8 643.3 829.2 660.0 815.0 C 676.7 800.8 683.3 772.5 700.0 770.0 C 716.7 767.5 760.0 775.0 760.0 800.0 C 760.0 825.0 746.7 900.0 700.0 920.0 C 653.3 940.0 518.3 931.7 480.0 920.0 C 441.7 908.3 463.3 858.3 470.0 850.0 Z" fill="#000" opacity="0.6" filter="url(#soft)"/>
+      <!-- top-left of the dome, turning away from the light -->
+      <path d="M 360.0 640.0 C 360.0 625.8 396.7 593.3 420.0 575.0 C 443.3 556.7 491.7 525.8 500.0 530.0 C 508.3 534.2 483.3 578.3 470.0 600.0 C 456.7 621.7 438.3 653.3 420.0 660.0 C 401.7 666.7 360.0 654.2 360.0 640.0 Z" fill="#000" opacity="0.2" filter="url(#soft)"/>
+      <!-- bounce light along the right edge -->
+      <path d="M 392.0 622.0 C 398.2 614.8 416.0 590.8 429.0 579.0 C 442.0 567.2 457.5 558.3 470.0 551.0 C 482.5 543.7 491.7 539.5 504.0 535.0 C 516.3 530.5 530.2 526.3 544.0 524.0 C 557.8 521.7 573.5 520.3 587.0 521.0 C 600.5 521.7 613.3 524.5 625.0 528.0 C 636.7 531.5 648.0 537.0 657.0 542.0 C 666.0 547.0 672.0 552.0 679.0 558.0 C 686.0 564.0 693.2 571.3 699.0 578.0 C 704.8 584.7 708.8 589.5 714.0 598.0 C 719.2 606.5 725.8 618.0 730.0 629.0 C 734.2 640.0 737.3 653.8 739.0 664.0 C 740.7 674.2 741.3 678.2 740.0 690.0 C 738.7 701.8 735.7 721.7 731.0 735.0 C 726.3 748.3 719.2 759.0 712.0 770.0 C 704.8 781.0 695.8 792.0 688.0 801.0 C 680.2 810.0 673.8 816.2 665.0 824.0 C 656.2 831.8 640.0 844.0 635.0 848.0" fill="none" stroke="#8a9097" stroke-opacity="0.55" stroke-width="7" filter="url(#soft1)" transform="translate(-6 0)"/>
+      <!-- the slit on top of the head -->
+      <path d="M 506 549 Q 555 537 604 545" fill="none" stroke="#fff" stroke-opacity="0.18" stroke-width="5" stroke-linecap="round" filter="url(#soft2)"/>
+      <path d="M 506 543 Q 555 530 604 539" fill="none" stroke="#050505" stroke-width="7" stroke-linecap="round"/>
+      <!-- contact shadow cast by the ear tip -->
+      <use href="#tipshape" fill="#000" opacity="0.45" filter="url(#soft1)" transform="translate(7 3)"/>
     </g>
-    <rect x="22" y="66" width="9" height="34" rx="4.5" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="0.7"/>
-    <path d="M 24.2 69 L 24.2 84" stroke="#fff" stroke-opacity="0.45" stroke-width="0.9" stroke-linecap="round"/>
+    <use href="#head" fill="none" stroke="#8a9097" stroke-opacity="0.25" stroke-width="2"/>
 
-    <!-- pressure vent at the top of the stem -->
-    <rect x="19.3" y="37" width="2.6" height="9" rx="1.3" fill="#000" opacity="0.85"/>
-    <path d="M 22.2 38 L 22.2 45" stroke="#fff" stroke-opacity="0.25" stroke-width="0.6" stroke-linecap="round"/>
-
-    <!-- talk microphone at the bottom of the stem -->
-    <ellipse cx="26.5" cy="111.5" rx="4.4" ry="2.6" fill="url(#mic)"/>
-    <ellipse cx="26.5" cy="112.6" rx="4.4" ry="2" fill="none" stroke="#fff" stroke-opacity="0.25" stroke-width="0.6"/>
-    <circle cx="25" cy="111.3" r="0.45" fill="#7d838b"/><circle cx="26.5" cy="111.3" r="0.45" fill="#7d838b"/>
-    <circle cx="28" cy="111.3" r="0.45" fill="#7d838b"/><circle cx="25.8" cy="112.3" r="0.45" fill="#7d838b"/>
-    <circle cx="27.2" cy="112.3" r="0.45" fill="#7d838b"/>
-
-    <!-- nozzle collar where the tip mounts -->
-    <path d="M 70 60 C 74 57 78 57 80 59 L 80 88 C 77 90 73 89 70 86 Z" fill="#000" opacity="0.5" filter="url(#soft1)"/>
-
-    <!-- silicone ear tip (truncated cone, opening facing the other earbud) -->
-    <g filter="url(#tipshade)">
-      <path d="M 74 57 C 82 53 92 53 99 57 C 105 61 108 70 106 80 C 104 89 99 95 92 96 C 85 97 79 94 75 88 C 71 79 71 66 74 57 Z"
-            fill="url(#tip)"/>
+    <!-- ===== silicone ear tip ===== -->
+    <use href="#tipshape" fill="url(#tipg)"/>
+    <g clip-path="url(#tipclip)">
+      <rect x="260" y="640" width="300" height="300" fill="url(#tipshade)"/>
+      <!-- rounded outer lip catches a little light on the left/top -->
+      <path d="M 334.0 672.0 C 329.0 676.7 312.8 689.2 304.0 700.0 C 295.2 710.8 286.5 724.2 281.0 737.0 C 275.5 749.8 272.0 763.7 271.0 777.0 C 270.0 790.3 271.5 803.7 275.0 817.0 C 278.5 830.3 285.7 845.3 292.0 857.0 C 298.3 868.7 304.3 877.3 313.0 887.0 C 321.7 896.7 338.8 910.3 344.0 915.0" fill="none" stroke="#4a4a4c" stroke-opacity="0.9" stroke-width="10" filter="url(#soft1)" transform="translate(5 3)"/>
+      <!-- nozzle opening -->
+      <path d="M 336.0 776.0 C 343.8 773.8 354.3 773.7 362.0 775.0 C 369.7 776.3 376.3 779.0 382.0 784.0 C 387.7 789.0 392.5 797.0 396.0 805.0 C 399.5 813.0 402.3 823.2 403.0 832.0 C 403.7 840.8 402.8 850.8 400.0 858.0 C 397.2 865.2 392.0 871.3 386.0 875.0 C 380.0 878.7 372.0 880.5 364.0 880.0 C 356.0 879.5 345.7 876.0 338.0 872.0 C 330.3 868.0 323.2 862.5 318.0 856.0 C 312.8 849.5 309.0 841.0 307.0 833.0 C 305.0 825.0 304.7 815.5 306.0 808.0 C 307.3 800.5 310.0 793.3 315.0 788.0 C 320.0 782.7 328.2 778.2 336.0 776.0 Z" fill="#141415"/>
+      <g clip-path="url(#boreclip)">
+        <path d="M 336.0 776.0 C 343.8 773.8 354.3 773.7 362.0 775.0 C 369.7 776.3 376.3 779.0 382.0 784.0 C 387.7 789.0 392.5 797.0 396.0 805.0 C 399.5 813.0 402.3 823.2 403.0 832.0 C 403.7 840.8 402.8 850.8 400.0 858.0 C 397.2 865.2 392.0 871.3 386.0 875.0 C 380.0 878.7 372.0 880.5 364.0 880.0 C 356.0 879.5 345.7 876.0 338.0 872.0 C 330.3 868.0 323.2 862.5 318.0 856.0 C 312.8 849.5 309.0 841.0 307.0 833.0 C 305.0 825.0 304.7 815.5 306.0 808.0 C 307.3 800.5 310.0 793.3 315.0 788.0 C 320.0 782.7 328.2 778.2 336.0 776.0 Z" fill="#2c2c2d"/>
+        <path d="M 336.0 776.0 C 343.8 773.8 354.3 773.7 362.0 775.0 C 369.7 776.3 376.3 779.0 382.0 784.0 C 387.7 789.0 392.5 797.0 396.0 805.0 C 399.5 813.0 402.3 823.2 403.0 832.0 C 403.7 840.8 402.8 850.8 400.0 858.0 C 397.2 865.2 392.0 871.3 386.0 875.0 C 380.0 878.7 372.0 880.5 364.0 880.0 C 356.0 879.5 345.7 876.0 338.0 872.0 C 330.3 868.0 323.2 862.5 318.0 856.0 C 312.8 849.5 309.0 841.0 307.0 833.0 C 305.0 825.0 304.7 815.5 306.0 808.0 C 307.3 800.5 310.0 793.3 315.0 788.0 C 320.0 782.7 328.2 778.2 336.0 776.0 Z" fill="url(#boreg)"/>
+        <path d="M 345.0 776.0 C 348.0 772.8 364.5 776.2 372.0 779.0 C 379.5 781.8 385.2 787.0 390.0 793.0 C 394.8 799.0 398.7 807.2 401.0 815.0 C 403.3 822.8 404.3 832.2 404.0 840.0 C 403.7 847.8 401.5 856.3 399.0 862.0 C 396.5 867.7 392.8 875.7 389.0 874.0 C 385.2 872.3 380.2 860.3 376.0 852.0 C 371.8 843.7 367.7 833.0 364.0 824.0 C 360.3 815.0 357.2 806.0 354.0 798.0 C 350.8 790.0 342.0 779.2 345.0 776.0 Z" fill="url(#meshg)"/>
+        <path d="M 345.0 776.0 C 348.0 772.8 364.5 776.2 372.0 779.0 C 379.5 781.8 385.2 787.0 390.0 793.0 C 394.8 799.0 398.7 807.2 401.0 815.0 C 403.3 822.8 404.3 832.2 404.0 840.0 C 403.7 847.8 401.5 856.3 399.0 862.0 C 396.5 867.7 392.8 875.7 389.0 874.0 C 385.2 872.3 380.2 860.3 376.0 852.0 C 371.8 843.7 367.7 833.0 364.0 824.0 C 360.3 815.0 357.2 806.0 354.0 798.0 C 350.8 790.0 342.0 779.2 345.0 776.0 Z" fill="url(#mesh)"/>
+        <!-- inner wall, darker at the back -->
+        <path d="M 312.0 795.0 C 313.7 782.3 328.7 781.2 335.0 782.0 C 341.3 782.8 346.2 791.2 350.0 800.0 C 353.8 808.8 357.0 823.7 358.0 835.0 C 359.0 846.3 361.5 864.2 356.0 868.0 C 350.5 871.8 332.3 870.2 325.0 858.0 C 317.7 845.8 310.3 807.7 312.0 795.0 Z" fill="#000" opacity="0.45" filter="url(#soft1)"/>
+        <!-- inner lip shadow along the top rim -->
+        <path d="M 336.0 776.0 C 343.8 773.8 354.3 773.7 362.0 775.0 C 369.7 776.3 376.3 779.0 382.0 784.0 C 387.7 789.0 392.5 797.0 396.0 805.0 C 399.5 813.0 402.3 823.2 403.0 832.0 C 403.7 840.8 402.8 850.8 400.0 858.0 C 397.2 865.2 392.0 871.3 386.0 875.0 C 380.0 878.7 372.0 880.5 364.0 880.0 C 356.0 879.5 345.7 876.0 338.0 872.0 C 330.3 868.0 323.2 862.5 318.0 856.0 C 312.8 849.5 309.0 841.0 307.0 833.0 C 305.0 825.0 304.7 815.5 306.0 808.0 C 307.3 800.5 310.0 793.3 315.0 788.0 C 320.0 782.7 328.2 778.2 336.0 776.0 Z" fill="none" stroke="#000" stroke-opacity="0.6" stroke-width="10" filter="url(#soft2)" transform="translate(0 5)"/>
+      </g>
+      <!-- lit lower lip of the opening -->
+      <path d="M 403.0 832.0 C 402.5 836.3 402.8 850.8 400.0 858.0 C 397.2 865.2 392.0 871.3 386.0 875.0 C 380.0 878.7 372.0 880.5 364.0 880.0 C 356.0 879.5 345.7 876.0 338.0 872.0 C 330.3 868.0 321.3 858.7 318.0 856.0" fill="none" stroke="#4a4a4c" stroke-opacity="0.9" stroke-width="5" filter="url(#soft2)" transform="translate(2 5)"/>
     </g>
-    <!-- translucent lip: light passes through the thin rim -->
-    <path d="M 99 57 C 105 61 108 70 106 80 C 104 89 99 95 92 96" fill="none" stroke="@tiphi@" stroke-opacity="0.55" stroke-width="1.6" stroke-linecap="round"/>
-    <!-- the opening with the acoustic mesh -->
-    <path d="M 99 59 C 103 63 105 71 104 79 C 103 86 99 92 94 94 C 96 87 98 79 98 71 C 98 66 98.5 62 99 59 Z" fill="url(#bore)"/>
-    <path d="M 99 59 C 103 63 105 71 104 79 C 103 86 99 92 94 94 C 96 87 98 79 98 71 C 98 66 98.5 62 99 59 Z" fill="url(#mesh)"/>
-    <!-- fold where the cone meets the body side, and the soft top sheen -->
-    <path d="M 74 57 C 71 67 71 79 75 88" fill="none" stroke="#000" stroke-opacity="0.5" stroke-width="2.4" stroke-linecap="round" filter="url(#soft1)"/>
-    <path d="M 80 57 C 87 55 93 56 97 59" fill="none" stroke="#fff" stroke-opacity="0.22" stroke-width="2.6" stroke-linecap="round" filter="url(#soft1)"/>
-    <path d="M 75 88 C 79 94 85 97 92 96" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round" filter="url(#soft1)"/>
+   </g>
   </g>
   <!-- side letter (gold), never mirrored -->
-  <text x="@lx@" y="58" font-family="sans-serif" font-size="7" font-weight="700" fill="#c9a36b" fill-opacity="0.9" text-anchor="middle">@letter@</text>
+  <text x="64" y="104" font-family="'Montserrat','Poppins','Helvetica Neue',Arial,sans-serif" font-size="7.6"
+        font-weight="600" fill="#c8b388" text-anchor="middle">@letter@</text>
 </svg>

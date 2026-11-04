@@ -72,7 +72,7 @@ Bluetooth signal strength (`btmgmt conn-info`, for the "hot or cold" finder).
 - **Waybar**: an icon and a percentage for each earbud and the case (`buds waybar --part left|right|case`,
   `--icon` for an image module); see the Spanish README for a config example.
 - **Looks**: dark Ayu theme by default (or your system theme), with illustrations of the earbuds and case in
-  their real color — Obsidian Black, Cloud White or Glacier Blue (menu → *Color de los audífonos*).
+  Obsidian Black.
 
 ## CLI
 

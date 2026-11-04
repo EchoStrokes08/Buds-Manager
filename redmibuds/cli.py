@@ -270,7 +270,7 @@ PART_LABEL = {"left": "Izquierdo", "right": "Derecho", "case": "Estuche"}
 
 
 def make_waybar_icons(px=48):
-    """Renders left / right / case icons (in the earbuds' color) for Waybar's image modules."""
+    """Renders left / right / case icons for Waybar's image modules."""
     from .art import bar_icon
     os.makedirs(WAYBAR_ICON_DIR, exist_ok=True)
     bar_icon("earbud-left", px).savev(os.path.join(WAYBAR_ICON_DIR, "left.png"), "png", [], [])
@@ -578,7 +578,7 @@ def build_parser():
     s.add_argument("--part", choices=["left", "right", "case"])
     s.add_argument("--icon", action="store_true")
     s.set_defaults(fn=None)
-    sub.add_parser("waybar-icons", help="regenera los íconos de Waybar (al cambiar el color)").set_defaults(fn=None)
+    sub.add_parser("waybar-icons", help="regenera los íconos de Waybar (tras editar data/icons)").set_defaults(fn=None)
     sub.add_parser("daemon", help="servicio que mantiene el control en esta PC (lo usa systemd)").set_defaults(fn=None)
     s = sub.add_parser("hold", help="mantener el control de los audífonos en esta PC: on | off | status")
     s.add_argument("state", nargs="?", default="status", choices=["on", "off", "status"])

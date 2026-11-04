@@ -1,4 +1,4 @@
-"""Device illustrations (data/icons/*.svg) in the earbuds' official colors. GdkPixbuf only (no GTK),
+"""Device illustrations (data/icons/*.svg), drawn in Obsidian Black. GdkPixbuf only (no GTK),
 so the CLI can render them too (Waybar icons)."""
 import os
 
@@ -8,39 +8,11 @@ gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf  # noqa: E402
 
 ICON_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "icons")
-# The three official colors of the REDMI Buds 8 Pro (config "buds_color").
-BUDS_COLORS = {
-    "black": {"label": "Negro obsidiana",
-              "hi": "#5d626a", "mid": "#2b2e33", "lo": "#0e1012", "lidhi": "#555a61", "lidlo": "#25282c",
-              "tiphi": "#4a4e54", "tipmid": "#26292d", "tiplo": "#101214",
-              "ch1": "#0d0f12", "ch2": "#d9dde2", "ch3": "#3a3f46", "ch4": "#f4f6f8", "ch5": "#2a2e34", "ch6": "#08090b",
-              "edge": "#ffffff", "edgea": "0.18", "rima": "0.45",
-              "specexp": "34", "speck": "0.6", "diffk": "1.2", "diffb": "0.15", "chroma": "0.75", "tipspec": "0.35", "refl": "0.30", "casespecexp": "14", "casespeck": "0.40"},
-    "white": {"label": "Blanco nube",
-              "hi": "#f6f6f4", "mid": "#d9d8d3", "lo": "#9b9a94", "lidhi": "#fbfbfa", "lidlo": "#dedcd7",
-              "tiphi": "#d2d4d6", "tipmid": "#a3a7ab", "tiplo": "#6b7075",
-              "ch1": "#3a3f45", "ch2": "#f4f6f8", "ch3": "#7b828a", "ch4": "#ffffff", "ch5": "#5f666e", "ch6": "#22262b",
-              "edge": "#6c7178", "edgea": "0.5", "rima": "0.5",
-              "specexp": "28", "speck": "0.35", "diffk": "0.45", "diffb": "0.6", "chroma": "0.55", "tipspec": "0.25", "refl": "0.45", "casespecexp": "10", "casespeck": "0.22"},
-    "blue": {"label": "Azul glaciar",
-             "hi": "#e6f0f8", "mid": "#a9c2d6", "lo": "#5f7d96", "lidhi": "#eef5fb", "lidlo": "#b9cfe0",
-             "tiphi": "#b9c6d1", "tipmid": "#7e8e9c", "tiplo": "#4c5966",
-             "ch1": "#34404b", "ch2": "#f1f6fa", "ch3": "#76889a", "ch4": "#ffffff", "ch5": "#56687a", "ch6": "#1f2730",
-             "edge": "#5a6b7a", "edgea": "0.5", "rima": "0.5",
-              "specexp": "30", "speck": "0.45", "diffk": "0.55", "diffb": "0.5", "chroma": "0.6", "tipspec": "0.25", "refl": "0.40", "casespecexp": "12", "casespeck": "0.28"},
-}
 
 
-def buds_color():
-    from .automations import load_config
-    c = load_config().get("buds_color", "black")
-    return c if c in BUDS_COLORS else "black"
-
-
-def svg_for(name, color=None):
-    """SVG text of an illustration with the palette of `color` filled in.
-    name: "case", "earbud-left" or "earbud-right" (the right one is the left body mirrored, letter upright)."""
-    pal = BUDS_COLORS[color or buds_color()]
+def svg_for(name):
+    """SVG text of an illustration. name: "case", "earbud-left" or "earbud-right"
+    (the right one is the left drawing mirrored, letter upright)."""
     side = None
     if name.startswith("earbud"):
         side = "right" if name.endswith("right") else "left"
@@ -50,11 +22,7 @@ def svg_for(name, color=None):
     if side:
         right = side == "right"
         text = (text.replace("@flip@", "translate(128,0) scale(-1,1)" if right else "translate(0,0)")
-                    .replace("@lx@", "101.5" if right else "26.5")
-                    .replace("@shx@", "101.5" if right else "26.5")
                     .replace("@letter@", "R" if right else "L"))
-    for k, v in pal.items():
-        text = text.replace(f"@{k}@", v)
     return text
 
 
@@ -80,23 +48,46 @@ def _crop(pb, pad=1):
     return out
 
 
-def bar_icon(name, px, color="white"):
-    """Compact icon for a status bar: no contact shadow, margins trimmed, light palette for contrast."""
-    svg = svg_for(name, color)
+# Light panel behind the bar icons so they read on the dark (Ayu) Waybar: Ayu "texto" (theme.AYU["fg"])
+# with a slightly darker rim of the same hue.
+BAR_PANEL = {"fill": "#e5e1cf", "rim": "#bdb8a4"}
+
+
+def _bar_panel(px):
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {px} {px}" width="{px}" height="{px}">'
+           f'<rect x="0.5" y="0.5" width="{px - 1}" height="{px - 1}" rx="{px * 0.26:.1f}" '
+           f'fill="{BAR_PANEL["fill"]}" stroke="{BAR_PANEL["rim"]}" stroke-width="1"/></svg>')
+    loader = GdkPixbuf.PixbufLoader.new_with_type("svg")
+    loader.write(svg.encode())
+    loader.close()
+    return loader.get_pixbuf()
+
+
+def bar_icon(name, px, panel=True):
+    """Compact icon for a status bar: no contact shadow, margins trimmed, on a light rounded panel."""
+    svg = svg_for(name)
     import re
-    svg = re.sub(r"^\s*<g id=\"shadow\">.*?</g>", "", svg, count=1, flags=re.S | re.M)     # the contact shadow
+    svg = re.sub(r"<!--.*?-->", "", svg, flags=re.S)       # comments may mention <g id="shadow"> too
+    svg = re.sub(r"<g id=\"shadow\">.*?</g>", "", svg, count=1, flags=re.S)     # the contact shadow
     loader = GdkPixbuf.PixbufLoader.new_with_type("svg")
     loader.set_size(px * 2, px * 2)
     loader.write(svg.encode())
     loader.close()
     pb = _crop(loader.get_pixbuf())
-    return pb.scale_simple(px, px, GdkPixbuf.InterpType.HYPER)
+    if not panel:
+        return pb.scale_simple(px, px, GdkPixbuf.InterpType.HYPER)
+    inner = round(px * 0.8)                       # drawing inset inside the panel
+    pb = pb.scale_simple(inner, inner, GdkPixbuf.InterpType.HYPER)
+    out = _bar_panel(px)
+    off = (px - inner) // 2
+    pb.composite(out, off, off, inner, inner, off, off, 1, 1, GdkPixbuf.InterpType.NEAREST, 255)
+    return out
 
 
-def icon_pixbuf(name, px, color=None):
+def icon_pixbuf(name, px):
     loader = GdkPixbuf.PixbufLoader.new_with_type("svg")
     loader.set_size(px, px)
-    loader.write(svg_for(name, color).encode())
+    loader.write(svg_for(name).encode())
     loader.close()
     return loader.get_pixbuf()
 

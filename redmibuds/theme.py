@@ -159,17 +159,16 @@ def apply(name):
 
 # ---------- widgets ----------
 
-from .art import BUDS_COLORS, buds_color, icon_pixbuf  # noqa: E402,F401
+from .art import icon_pixbuf  # noqa: E402
 
 _textures = {}
 
 
-def icon_texture(name, px, color=None):
-    """Detailed device illustration (data/icons/<name>.svg) rendered at px×px in the earbuds' color, cached."""
-    color = color or buds_color()
-    key = (name, px, color)
+def icon_texture(name, px):
+    """Detailed device illustration (data/icons/<name>.svg) rendered at px×px, cached."""
+    key = (name, px)
     if key not in _textures:
-        _textures[key] = Gdk.Texture.new_for_pixbuf(icon_pixbuf(name, px, color))
+        _textures[key] = Gdk.Texture.new_for_pixbuf(icon_pixbuf(name, px))
     return _textures[key]
 
 
@@ -231,15 +230,11 @@ class BatteryRing(Gtk.Widget):
         icon = size * 0.66
         ix, iy = cx - icon / 2, cy - icon / 2
         px = int(math.ceil(icon * self.get_scale_factor() * 1.5))
-        tex = icon_texture("case" if self.kind == "case" else "earbud", px)
+        tex = icon_texture("case" if self.kind == "case" else f"earbud-{self.kind}", px)
         snapshot.save()
         if self.level is None:
             snapshot.push_opacity(0.4)
-        if self.kind == "right":
-            snapshot.translate(Graphene.Point().init(ix + icon, iy))
-            snapshot.scale(-1, 1)
-        else:
-            snapshot.translate(Graphene.Point().init(ix, iy))
+        snapshot.translate(Graphene.Point().init(ix, iy))
         snapshot.append_texture(tex, Graphene.Rect().init(0, 0, icon, icon))
         if self.level is None:
             snapshot.pop()
