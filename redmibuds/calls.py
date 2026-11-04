@@ -27,7 +27,20 @@ CALL_APPS = ["discord", "vesktop", "legcord", "webcord", "zoom", "teams", "teleg
              "element", "mumble", "skype", "jitsi", "whatsapp", "zapzap", "firefox", "librewolf", "zen",
              "chromium", "chrome", "brave", "vivaldi", "opera", "edge"]
 CALL_ROLES = {"communication", "phone"}
-RELEASE_DELAY = 3.0     # seconds without call recordings before going back to music
+RELEASE_DELAY = 12.0    # seconds without call recordings before going back to music
+MAX_RELEASE_DELAY = 60.0
+FLAP_WINDOW = 60.0      # a call coming back this soon after a release counts as flapping
+
+
+def next_release_delay(current, since_release):
+    """Release delay to use for a call that starts `since_release` seconds after the last release.
+
+    Web calls (Zoom/Meet in a browser) close and reopen the mic every few seconds; each profile change
+    tears the Bluetooth audio link down, and a quick burst of them can leave it stuck in silence. So a
+    call that comes back soon after we released doubles the wait, up to MAX_RELEASE_DELAY."""
+    if since_release is not None and since_release < FLAP_WINDOW:
+        return min(current * 2, MAX_RELEASE_DELAY)
+    return RELEASE_DELAY
 
 
 def is_call(rec, extra=()):
@@ -45,6 +58,8 @@ class CallMic:
         self.mode = None
         self.switched = None             # (mac, music profile, previous default source) while we hold HFP
         self.last_call = 0
+        self.released_at = None
+        self.release_delay = RELEASE_DELAY
         self.denoiser = Denoiser()
         self.call_source = None          # where call apps record from while switched (clean or raw mic)
         self._kick = threading.Event()
@@ -105,10 +120,11 @@ class CallMic:
             else:
                 self._move(calls)
         elif self.switched:
-            if time.time() - self.last_call >= RELEASE_DELAY:
+            left = self.release_delay - (time.time() - self.last_call)
+            if left <= 0:
                 self._release()
             else:
-                threading.Timer(RELEASE_DELAY, self._kick.set).start()
+                threading.Timer(left + 0.1, self._kick.set).start()
 
     def _move(self, calls):
         """Points the call apps' recordings at the call mic (clean one when the filter runs)."""
@@ -130,6 +146,8 @@ class CallMic:
             (p for p in profs if p.startswith("headset")), None)
         if not hfp:
             return
+        since = None if self.released_at is None else time.time() - self.released_at
+        self.release_delay = next_release_delay(self.release_delay, since)
         self.switched = (mac, active, audio.default_source())
         audio.set_profile(mac, hfp)
         mic = None
@@ -144,12 +162,13 @@ class CallMic:
             audio.set_default_source(self.call_source)
             self._move(calls)
         apps = ", ".join(sorted({r["app"] or r["binary"] for r in calls}))
-        log("micrófono: llamada en", apps, "→ perfil", hfp)
+        log("micrófono: llamada en", apps, "→ perfil", hfp, f"(vuelve a música tras {self.release_delay:.0f} s sin micrófono)")
         notify("Micrófono de los audífonos activado", f"Llamada en {apps}. Al terminar vuelve la calidad de música.")
 
     def _release(self):
         mac, music, prev_src = self.switched
         self.switched = None
+        self.released_at = time.time()
         self.call_source = None
         self.denoiser.stop()
         try:
