@@ -1711,8 +1711,23 @@ class App(Adw.Application):
         if existing and os.environ.get("HYPRLAND_INSTANCE_SIGNATURE") and shutil.which("hyprctl"):
             # opened again from the launcher while the window sits on another workspace: Hyprland ignores
             # activation requests by default (misc:focus_on_activate), so ask it to focus us
-            subprocess.run(["hyprctl", "dispatch", "focuswindow", f"class:^({APP_ID})$"],
-                           capture_output=True, timeout=3)
+            _hypr_focus_app()
+
+
+def _hypr_focus_app():
+    """Focus our window in Hyprland. Hyprland >= 0.57 with a Lua config takes Lua expressions in
+    `hyprctl dispatch` (the classic `focuswindow class:...` form fails there), so try both."""
+    attempts = (
+        ["hyprctl", "dispatch", f'hl.dsp.focus({{ window = hl.get_windows({{ class = "{APP_ID}" }})[1] }})'],
+        ["hyprctl", "dispatch", "focuswindow", f"class:^({APP_ID})$"],
+    )
+    for cmd in attempts:
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
+        except (OSError, subprocess.TimeoutExpired):
+            return
+        if r.returncode == 0 and "error" not in (r.stdout + r.stderr).lower():
+            return
 
 
 def main():
