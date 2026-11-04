@@ -1,65 +1,192 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <!-- REDMI Buds 8 Pro earbud, front view like the official app: straight stem on the outer side, bulbous
        head, silicone tip facing the other earbud. Drawn for the left one; @flip@ mirrors the body for the
-       right one while the side letter (@letter@) stays readable. @tokens@ = palette (art.BUDS_COLORS). -->
+       right one while the side letter (@letter@) stays readable. @tokens@ = palette (art.BUDS_COLORS).
+       Realism comes from real lighting: the body's alpha is blurred into a height map and lit with
+       feSpecularLighting/feDiffuseLighting, plus ambient occlusion, rim light and a fine satin grain.
+       Everything inside <g id="shadow"> is dropped for the compact bar icons (art.bar_icon). -->
   <defs>
-    <linearGradient id="stem" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="@lo@"/>
-      <stop offset="0.38" stop-color="@hi@"/>
-      <stop offset="0.62" stop-color="@mid@"/>
+    <path id="head" d="M 15 50 C 15 33 25 24 42 22 C 62 20 82 26 90 42 C 97 56 94 74 80 82 C 68 89 52 88 44 80 C 40 76 38 70 38 64 L 38 76 L 15 76 Z"/>
+    <rect id="stemr" x="15" y="34" width="23" height="84" rx="11.5"/>
+    <clipPath id="bodyclip"><use href="#head"/><use href="#stemr"/></clipPath>
+
+    <!-- base colour: soft vertical falloff (sky above, floor below) -->
+    <linearGradient id="base" gradientUnits="userSpaceOnUse" x1="0" y1="20" x2="0" y2="118">
+      <stop offset="0" stop-color="@hi@"/>
+      <stop offset="0.35" stop-color="@mid@"/>
       <stop offset="1" stop-color="@lo@"/>
     </linearGradient>
-    <radialGradient id="head" cx="0.42" cy="0.36" r="0.72">
-      <stop offset="0" stop-color="@hi@"/>
-      <stop offset="0.55" stop-color="@mid@"/>
-      <stop offset="1" stop-color="@lo@"/>
-    </radialGradient>
-    <radialGradient id="tip" cx="0.35" cy="0.3" r="0.85">
-      <stop offset="0" stop-color="@tiphi@"/>
-      <stop offset="0.6" stop-color="@tipmid@"/>
-      <stop offset="1" stop-color="@tiplo@"/>
-    </radialGradient>
-    <linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="44" x2="0" y2="68">
+    <!-- cylindrical stem: dark core, bright reflection band, bounce light on the far side -->
+    <linearGradient id="stemcyl" gradientUnits="userSpaceOnUse" x1="15" y1="0" x2="38" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0.45"/>
+      <stop offset="0.18" stop-color="#000" stop-opacity="0.05"/>
+      <stop offset="0.34" stop-color="#fff" stop-opacity="0.30"/>
+      <stop offset="0.44" stop-color="#fff" stop-opacity="0.06"/>
+      <stop offset="0.72" stop-color="#000" stop-opacity="0.22"/>
+      <stop offset="0.9" stop-color="#fff" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.40"/>
+    </linearGradient>
+    <linearGradient id="stemfadein" gradientUnits="userSpaceOnUse" x1="0" y1="50" x2="0" y2="70">
       <stop offset="0" stop-color="#fff" stop-opacity="0"/>
       <stop offset="1" stop-color="#fff" stop-opacity="1"/>
     </linearGradient>
-    <mask id="stemfade" maskUnits="userSpaceOnUse" x="0" y="0" width="128" height="128">
-      <rect x="0" y="0" width="128" height="128" fill="url(#fade)"/>
+    <mask id="stemmask" maskUnits="userSpaceOnUse" x="0" y="0" width="128" height="128">
+      <rect x="0" y="0" width="128" height="128" fill="url(#stemfadein)"/>
     </mask>
-    <radialGradient id="mic" cx="0.4" cy="0.35" r="0.7">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#b9bec4"/>
+
+    <!-- mirror-chrome touch strip on the stem: sharp horizon reflection -->
+    <linearGradient id="chrome" gradientUnits="userSpaceOnUse" x1="0" y1="66" x2="0" y2="100">
+      <stop offset="0" stop-color="@ch1@"/>
+      <stop offset="0.16" stop-color="@ch2@"/>
+      <stop offset="0.30" stop-color="@ch3@"/>
+      <stop offset="0.47" stop-color="@ch5@"/>
+      <stop offset="0.48" stop-color="@ch4@"/>
+      <stop offset="0.62" stop-color="@ch3@"/>
+      <stop offset="0.86" stop-color="@ch6@"/>
+      <stop offset="1" stop-color="@ch5@"/>
+    </linearGradient>
+    <linearGradient id="chromeside" gradientUnits="userSpaceOnUse" x1="21" y1="0" x2="32" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0.55"/>
+      <stop offset="0.3" stop-color="#000" stop-opacity="0"/>
+      <stop offset="0.75" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.5"/>
+    </linearGradient>
+
+    <!-- ambient occlusion where the ear tip sits on the head -->
+    <radialGradient id="ao" gradientUnits="userSpaceOnUse" cx="80" cy="74" r="24">
+      <stop offset="0" stop-color="#000" stop-opacity="0.65"/>
+      <stop offset="0.55" stop-color="#000" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
     </radialGradient>
+    <!-- rim light: brighter towards the key light (upper left) -->
+    <linearGradient id="rim" gradientUnits="userSpaceOnUse" x1="10" y1="20" x2="95" y2="100">
+      <stop offset="0" stop-color="@edge@" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="@edge@" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="@edge@" stop-opacity="0.08"/>
+    </linearGradient>
+
+    <!-- silicone ear tip: matte, slightly translucent at the thin lip -->
+    <radialGradient id="tip" gradientUnits="userSpaceOnUse" cx="84" cy="62" r="30">
+      <stop offset="0" stop-color="@tiphi@"/>
+      <stop offset="0.55" stop-color="@tipmid@"/>
+      <stop offset="1" stop-color="@tiplo@"/>
+    </radialGradient>
+    <radialGradient id="bore" gradientUnits="userSpaceOnUse" cx="99" cy="74" r="12">
+      <stop offset="0" stop-color="#000" stop-opacity="0.95"/>
+      <stop offset="0.7" stop-color="#000" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.15"/>
+    </radialGradient>
+    <pattern id="mesh" patternUnits="userSpaceOnUse" width="2.2" height="2.2">
+      <circle cx="1.1" cy="1.1" r="0.55" fill="#9aa0a8" fill-opacity="0.35"/>
+    </pattern>
+    <radialGradient id="mic" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#3a3e44"/>
+      <stop offset="1" stop-color="#050607"/>
+    </radialGradient>
+
+    <!-- glossy body: height map from the silhouette, lit by a key light (spec) and a soft fill (diffuse) -->
+    <filter id="gloss" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="9" result="h"/>
+      <feSpecularLighting in="h" surfaceScale="14" specularConstant="1" specularExponent="@specexp@"
+                          lighting-color="#ffffff" result="spec0">
+        <fePointLight x="40" y="0" z="60"/>
+      </feSpecularLighting>
+      <feGaussianBlur in="spec0" stdDeviation="1.6" result="spec"/>
+      <feComposite in="spec" in2="SourceAlpha" operator="in" result="specin"/>
+      <feDiffuseLighting in="h" surfaceScale="14" diffuseConstant="1" lighting-color="#ffffff" result="diff0">
+        <feDistantLight azimuth="235" elevation="55"/>
+      </feDiffuseLighting>
+      <feGaussianBlur in="diff0" stdDeviation="1.6" result="diff"/>
+      <feComposite in="SourceGraphic" in2="diff" operator="arithmetic" k1="@diffk@" k2="@diffb@" k3="0" k4="0" result="shaded"/>
+      <feComposite in="shaded" in2="specin" operator="arithmetic" k1="0" k2="1" k3="@speck@" k4="0" result="lit"/>
+      <!-- satin micro texture -->
+      <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="7" result="noise"/>
+      <feColorMatrix in="noise" type="matrix"
+                     values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0" result="grain"/>
+      <feComposite in="grain" in2="SourceAlpha" operator="in" result="grainin"/>
+      <feBlend in="grainin" in2="lit" mode="overlay"/>
+    </filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4"/></filter>
+    <filter id="soft1" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0.8"/></filter>
+    <filter id="tipshade" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="h"/>
+      <feSpecularLighting in="h" surfaceScale="10" specularConstant="0.6" specularExponent="9"
+                          lighting-color="#ffffff" result="spec0">
+        <fePointLight x="40" y="-10" z="60"/>
+      </feSpecularLighting>
+      <feGaussianBlur in="spec0" stdDeviation="1.6" result="spec"/>
+      <feComposite in="spec" in2="SourceAlpha" operator="in" result="specin"/>
+      <feComposite in="SourceGraphic" in2="specin" operator="arithmetic" k1="0" k2="1" k3="@tipspec@" k4="0"/>
+    </filter>
   </defs>
+
+  <g id="shadow">
+    <ellipse cx="@shx@" cy="121" rx="17" ry="3.2" fill="#000" opacity="0.5" filter="url(#soft)"/>
+    <ellipse cx="@shx@" cy="120.5" rx="10" ry="1.6" fill="#000" opacity="0.55" filter="url(#soft1)"/>
+  </g>
+
   <g transform="@flip@">
-    <!-- head (hump over the stem + bulb towards the centre) -->
-    <path d="M 15 50 C 15 33 25 24 42 22 C 62 20 82 26 90 42 C 97 56 94 74 80 82 C 68 89 52 88 44 80 C 40 76 38 70 38 64 L 38 76 L 15 76 Z"
-          fill="url(#head)"/>
-    <!-- stem, drawn over the head and faded in from it (smooth join) -->
-    <rect x="15" y="34" width="23" height="84" rx="11.5" fill="url(#stem)" mask="url(#stemfade)"/>
-    <path d="M 15 52 L 15 106.5 A 11.5 11.5 0 0 0 38 106.5 L 38 64" fill="none" stroke="@edge@" stroke-opacity="@edgea@" stroke-width="1"/>
-    <!-- outline only on the exposed contour (not where the head joins the stem) -->
-    <path d="M 15 52 L 15 50 C 15 33 25 24 42 22 C 62 20 82 26 90 42 C 97 56 94 74 80 82 C 68 89 52 88 44 80 C 40 76 38 70 38 64"
-          fill="none" stroke="@edge@" stroke-opacity="@edgea@" stroke-width="1"/>
-    <!-- soft highlight on the bulb -->
-    <ellipse cx="58" cy="42" rx="14" ry="11" fill="#fff" opacity="0.10"/>
-    <ellipse cx="54" cy="36" rx="7" ry="4.5" fill="#fff" opacity="0.13"/>
-    <!-- vent slit at the top of the stem -->
-    <rect x="19.5" y="37" width="2.2" height="9" rx="1.1" fill="@lo@" opacity="0.9"/>
-    <!-- stem highlight -->
-    <rect x="24" y="62" width="3.2" height="48" rx="1.6" fill="#fff" opacity="0.14"/>
-    <!-- silicone ear tip, facing the other earbud -->
-    <!-- truncated cone: narrow where it meets the head, wide flat face angled towards the ear -->
-    <path d="M 74 57 C 82 53 92 53 99 57 C 105 61 108 70 106 80 C 104 89 99 95 92 96 C 85 97 79 94 75 88 C 71 79 71 66 74 57 Z"
-          fill="url(#tip)" stroke="#000" stroke-opacity="0.35" stroke-width="1"/>
-    <!-- flat face (the opening) -->
-    <path d="M 99 57 C 105 61 108 70 106 80 C 104 89 99 95 92 96 C 96 88 98 79 98 70 C 98 64 99 60 99 57 Z"
-          fill="#000" opacity="0.28"/>
-    <path d="M 74 57 C 71 67 71 79 75 88" fill="none" stroke="#000" stroke-opacity="0.45" stroke-width="2.2" stroke-linecap="round"/>
-    <path d="M 80 57 C 87 55 93 56 97 59" fill="none" stroke="#fff" stroke-opacity="0.18" stroke-width="2.2" stroke-linecap="round"/>
-    <!-- microphone at the bottom of the stem -->
-    <ellipse cx="26.5" cy="112" rx="4.2" ry="2.8" fill="url(#mic)"/>
+    <!-- lit body (head + stem molded into one piece) -->
+    <g filter="url(#gloss)">
+      <use href="#head" fill="url(#base)"/>
+      <use href="#stemr" fill="url(#base)"/>
+    </g>
+
+    <g clip-path="url(#bodyclip)">
+      <!-- stem curvature, fading into the head -->
+      <rect x="15" y="34" width="23" height="84" fill="url(#stemcyl)" mask="url(#stemmask)"/>
+      <!-- crease where stem meets head -->
+      <path d="M 38 64 C 38 70 40 76 44 80" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="2.4" filter="url(#soft1)"/>
+      <!-- ambient occlusion around the tip -->
+      <circle cx="80" cy="74" r="24" fill="url(#ao)"/>
+      <!-- underside of the head falls into shadow -->
+      <path d="M 44 80 C 52 88 68 89 80 82 C 88 77 92 70 94 62 L 98 98 L 40 98 Z" fill="#000" opacity="0.28" filter="url(#soft)"/>
+      <!-- environment reflection: soft window on the dome -->
+      <path d="M 30 33 C 38 26 52 24 62 26 C 56 27 44 30 36 37 Z" fill="#fff" opacity="@refl@" filter="url(#soft1)"/>
+      <!-- inner rim light -->
+      <path d="M 15 52 L 15 50 C 15 33 25 24 42 22 C 62 20 82 26 90 42 C 97 56 94 74 80 82 C 68 89 52 88 44 80 C 40 76 38 70 38 64 L 38 106.5 A 11.5 11.5 0 0 1 15 106.5 Z" fill="none" stroke="url(#rim)" stroke-opacity="@rima@" stroke-width="2.4"/>
+    </g>
+    <!-- crisp outer edge, only on the exposed contour -->
+    <path d="M 15 52 L 15 50 C 15 33 25 24 42 22 C 62 20 82 26 90 42 C 97 56 94 74 80 82 C 68 89 52 88 44 80 C 40 76 38 70 38 64 L 38 106.5 A 11.5 11.5 0 0 1 15 106.5 Z"
+          fill="none" stroke="@edge@" stroke-opacity="@edgea@" stroke-width="0.7"/>
+
+    <!-- mirror-chrome touch strip -->
+    <g opacity="@chroma@">
+      <rect x="22" y="66" width="9" height="34" rx="4.5" fill="url(#chrome)"/>
+      <rect x="22" y="66" width="9" height="34" rx="4.5" fill="url(#chromeside)"/>
+    </g>
+    <rect x="22" y="66" width="9" height="34" rx="4.5" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="0.7"/>
+    <path d="M 24.2 69 L 24.2 84" stroke="#fff" stroke-opacity="0.45" stroke-width="0.9" stroke-linecap="round"/>
+
+    <!-- pressure vent at the top of the stem -->
+    <rect x="19.3" y="37" width="2.6" height="9" rx="1.3" fill="#000" opacity="0.85"/>
+    <path d="M 22.2 38 L 22.2 45" stroke="#fff" stroke-opacity="0.25" stroke-width="0.6" stroke-linecap="round"/>
+
+    <!-- talk microphone at the bottom of the stem -->
+    <ellipse cx="26.5" cy="111.5" rx="4.4" ry="2.6" fill="url(#mic)"/>
+    <ellipse cx="26.5" cy="112.6" rx="4.4" ry="2" fill="none" stroke="#fff" stroke-opacity="0.25" stroke-width="0.6"/>
+    <circle cx="25" cy="111.3" r="0.45" fill="#7d838b"/><circle cx="26.5" cy="111.3" r="0.45" fill="#7d838b"/>
+    <circle cx="28" cy="111.3" r="0.45" fill="#7d838b"/><circle cx="25.8" cy="112.3" r="0.45" fill="#7d838b"/>
+    <circle cx="27.2" cy="112.3" r="0.45" fill="#7d838b"/>
+
+    <!-- nozzle collar where the tip mounts -->
+    <path d="M 70 60 C 74 57 78 57 80 59 L 80 88 C 77 90 73 89 70 86 Z" fill="#000" opacity="0.5" filter="url(#soft1)"/>
+
+    <!-- silicone ear tip (truncated cone, opening facing the other earbud) -->
+    <g filter="url(#tipshade)">
+      <path d="M 74 57 C 82 53 92 53 99 57 C 105 61 108 70 106 80 C 104 89 99 95 92 96 C 85 97 79 94 75 88 C 71 79 71 66 74 57 Z"
+            fill="url(#tip)"/>
+    </g>
+    <!-- translucent lip: light passes through the thin rim -->
+    <path d="M 99 57 C 105 61 108 70 106 80 C 104 89 99 95 92 96" fill="none" stroke="@tiphi@" stroke-opacity="0.55" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- the opening with the acoustic mesh -->
+    <path d="M 99 59 C 103 63 105 71 104 79 C 103 86 99 92 94 94 C 96 87 98 79 98 71 C 98 66 98.5 62 99 59 Z" fill="url(#bore)"/>
+    <path d="M 99 59 C 103 63 105 71 104 79 C 103 86 99 92 94 94 C 96 87 98 79 98 71 C 98 66 98.5 62 99 59 Z" fill="url(#mesh)"/>
+    <!-- fold where the cone meets the body side, and the soft top sheen -->
+    <path d="M 74 57 C 71 67 71 79 75 88" fill="none" stroke="#000" stroke-opacity="0.5" stroke-width="2.4" stroke-linecap="round" filter="url(#soft1)"/>
+    <path d="M 80 57 C 87 55 93 56 97 59" fill="none" stroke="#fff" stroke-opacity="0.22" stroke-width="2.6" stroke-linecap="round" filter="url(#soft1)"/>
+    <path d="M 75 88 C 79 94 85 97 92 96" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round" filter="url(#soft1)"/>
   </g>
   <!-- side letter (gold), never mirrored -->
-  <text x="@lx@" y="101" font-family="sans-serif" font-size="8" font-weight="700" fill="#c9a36b" text-anchor="middle">@letter@</text>
+  <text x="@lx@" y="58" font-family="sans-serif" font-size="7" font-weight="700" fill="#c9a36b" fill-opacity="0.9" text-anchor="middle">@letter@</text>
 </svg>

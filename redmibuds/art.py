@@ -11,20 +11,23 @@ ICON_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 # The three official colors of the REDMI Buds 8 Pro (config "buds_color").
 BUDS_COLORS = {
     "black": {"label": "Negro obsidiana",
-              "hi": "#8d929a", "mid": "#45494f", "lo": "#17191c", "lidhi": "#7a7f86", "lidlo": "#3a3e44",
-              "tiphi": "#5c6067", "tipmid": "#33363b", "tiplo": "#17191c",
+              "hi": "#5d626a", "mid": "#2b2e33", "lo": "#0e1012", "lidhi": "#555a61", "lidlo": "#25282c",
+              "tiphi": "#4a4e54", "tipmid": "#26292d", "tiplo": "#101214",
               "ch1": "#0d0f12", "ch2": "#d9dde2", "ch3": "#3a3f46", "ch4": "#f4f6f8", "ch5": "#2a2e34", "ch6": "#08090b",
-              "edge": "#ffffff", "edgea": "0.28"},
+              "edge": "#ffffff", "edgea": "0.18", "rima": "0.45",
+              "specexp": "34", "speck": "0.6", "diffk": "1.2", "diffb": "0.15", "chroma": "0.75", "tipspec": "0.35", "refl": "0.30", "casespecexp": "14", "casespeck": "0.40"},
     "white": {"label": "Blanco nube",
               "hi": "#f6f6f4", "mid": "#d9d8d3", "lo": "#9b9a94", "lidhi": "#fbfbfa", "lidlo": "#dedcd7",
               "tiphi": "#d2d4d6", "tipmid": "#a3a7ab", "tiplo": "#6b7075",
               "ch1": "#3a3f45", "ch2": "#f4f6f8", "ch3": "#7b828a", "ch4": "#ffffff", "ch5": "#5f666e", "ch6": "#22262b",
-              "edge": "#6c7178", "edgea": "0.5"},
+              "edge": "#6c7178", "edgea": "0.5", "rima": "0.5",
+              "specexp": "28", "speck": "0.35", "diffk": "0.45", "diffb": "0.6", "chroma": "0.55", "tipspec": "0.25", "refl": "0.45", "casespecexp": "10", "casespeck": "0.22"},
     "blue": {"label": "Azul glaciar",
              "hi": "#e6f0f8", "mid": "#a9c2d6", "lo": "#5f7d96", "lidhi": "#eef5fb", "lidlo": "#b9cfe0",
              "tiphi": "#b9c6d1", "tipmid": "#7e8e9c", "tiplo": "#4c5966",
              "ch1": "#34404b", "ch2": "#f1f6fa", "ch3": "#76889a", "ch4": "#ffffff", "ch5": "#56687a", "ch6": "#1f2730",
-             "edge": "#5a6b7a", "edgea": "0.5"},
+             "edge": "#5a6b7a", "edgea": "0.5", "rima": "0.5",
+              "specexp": "30", "speck": "0.45", "diffk": "0.55", "diffb": "0.5", "chroma": "0.6", "tipspec": "0.25", "refl": "0.40", "casespecexp": "12", "casespeck": "0.28"},
 }
 
 
@@ -48,6 +51,7 @@ def svg_for(name, color=None):
         right = side == "right"
         text = (text.replace("@flip@", "translate(128,0) scale(-1,1)" if right else "translate(0,0)")
                     .replace("@lx@", "101.5" if right else "26.5")
+                    .replace("@shx@", "101.5" if right else "26.5")
                     .replace("@letter@", "R" if right else "L"))
     for k, v in pal.items():
         text = text.replace(f"@{k}@", v)
@@ -80,7 +84,7 @@ def bar_icon(name, px, color="white"):
     """Compact icon for a status bar: no contact shadow, margins trimmed, light palette for contrast."""
     svg = svg_for(name, color)
     import re
-    svg = re.sub(r'<ellipse[^>]*opacity="0\.(28|3)"/>', "", svg, count=1)     # the contact shadow
+    svg = re.sub(r"^\s*<g id=\"shadow\">.*?</g>", "", svg, count=1, flags=re.S | re.M)     # the contact shadow
     loader = GdkPixbuf.PixbufLoader.new_with_type("svg")
     loader.set_size(px * 2, px * 2)
     loader.write(svg.encode())

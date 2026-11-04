@@ -1,29 +1,106 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- REDMI Buds 8 Pro case, closed, front view like the official app: soft squircle, thin seam above the
-       middle and the white battery light bar. @tokens@ = palette (art.BUDS_COLORS). -->
+  <!-- REDMI Buds 8 Pro case, closed, front view like the official app: soft "bathtub" squircle, lid seam
+       above the middle and the recessed battery light strip on the front. @tokens@ = palette
+       (art.BUDS_COLORS). Lit with real lighting filters on a height map of the silhouette; the lid and the
+       base are lit separately so the seam reads as a physical gap. <g id="shadow"> is dropped for bar icons. -->
   <defs>
-    <radialGradient id="body" cx="0.48" cy="0.42" r="0.62">
-      <stop offset="0" stop-color="@hi@"/>
-      <stop offset="0.7" stop-color="@mid@"/>
-      <stop offset="1" stop-color="@lo@"/>
-    </radialGradient>
-    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fff" stop-opacity="0.10"/>
-      <stop offset="0.45" stop-color="#fff" stop-opacity="0"/>
-      <stop offset="1" stop-color="#000" stop-opacity="0.30"/>
+    <path id="shell" d="M 64 22 C 97 22 115 25 117.5 47 C 119.5 66 117 88 103 98 C 93 105 80 106 64 106 C 48 106 35 105 25 98 C 11 88 8.5 66 10.5 47 C 13 25 31 22 64 22 Z"/>
+    <clipPath id="shellclip"><use href="#shell"/></clipPath>
+    <clipPath id="lidclip"><path d="M 0 0 L 128 0 L 128 56 C 88 58.5 40 58.5 0 56 Z"/></clipPath>
+    <clipPath id="baseclip"><path d="M 0 57.6 C 40 60 88 60 128 57.6 L 128 128 L 0 128 Z"/></clipPath>
+
+    <linearGradient id="lid" gradientUnits="userSpaceOnUse" x1="0" y1="22" x2="0" y2="58">
+      <stop offset="0" stop-color="@lidhi@"/>
+      <stop offset="1" stop-color="@lidlo@"/>
     </linearGradient>
-    <filter id="glow" x="-50%" y="-300%" width="200%" height="700%">
-      <feGaussianBlur stdDeviation="1.6"/>
+    <linearGradient id="base" gradientUnits="userSpaceOnUse" x1="0" y1="58" x2="0" y2="106">
+      <stop offset="0" stop-color="@mid@"/>
+      <stop offset="0.55" stop-color="@mid@"/>
+      <stop offset="1" stop-color="@lo@"/>
+    </linearGradient>
+    <!-- side curvature (both flanks turn away from the light) -->
+    <linearGradient id="flanks" gradientUnits="userSpaceOnUse" x1="10" y1="0" x2="118" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0.45"/>
+      <stop offset="0.09" stop-color="#000" stop-opacity="0.05"/>
+      <stop offset="0.16" stop-color="#fff" stop-opacity="0.10"/>
+      <stop offset="0.3" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="0.8" stop-color="#000" stop-opacity="0.06"/>
+      <stop offset="0.93" stop-color="#000" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="rim" gradientUnits="userSpaceOnUse" x1="10" y1="20" x2="100" y2="110">
+      <stop offset="0" stop-color="@edge@" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="@edge@" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="@edge@" stop-opacity="0.05"/>
+    </linearGradient>
+    <linearGradient id="led" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="0.15" stop-color="#ffffff"/>
+      <stop offset="0.85" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.55"/>
+    </linearGradient>
+
+    <!-- satin plastic: broad soft highlight, diffuse fill, faint grain -->
+    <filter id="satin" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="12" result="h"/>
+      <feSpecularLighting in="h" surfaceScale="16" specularConstant="0.9" specularExponent="@casespecexp@"
+                          lighting-color="#ffffff" result="spec0">
+        <fePointLight x="50" y="-10" z="70"/>
+      </feSpecularLighting>
+      <feGaussianBlur in="spec0" stdDeviation="1.6" result="spec"/>
+      <feComposite in="spec" in2="SourceAlpha" operator="in" result="specin"/>
+      <feDiffuseLighting in="h" surfaceScale="16" diffuseConstant="1" lighting-color="#ffffff" result="diff0">
+        <feDistantLight azimuth="250" elevation="55"/>
+      </feDiffuseLighting>
+      <feGaussianBlur in="diff0" stdDeviation="1.6" result="diff"/>
+      <feComposite in="SourceGraphic" in2="diff" operator="arithmetic" k1="@diffk@" k2="@diffb@" k3="0" k4="0" result="shaded"/>
+      <feComposite in="shaded" in2="specin" operator="arithmetic" k1="0" k2="1" k3="@casespeck@" k4="0" result="lit"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="3" result="noise"/>
+      <feColorMatrix in="noise" type="matrix"
+                     values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.07 0" result="grain"/>
+      <feComposite in="grain" in2="SourceAlpha" operator="in" result="grainin"/>
+      <feBlend in="grainin" in2="lit" mode="overlay"/>
     </filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+    <filter id="soft1" x="-50%" y="-300%" width="200%" height="700%"><feGaussianBlur stdDeviation="0.9"/></filter>
+    <filter id="glow" x="-60%" y="-600%" width="220%" height="1300%"><feGaussianBlur stdDeviation="2.2"/></filter>
   </defs>
-  <path id="shell" d="M 64 22 C 97 22 115 25 117.5 47 C 119.5 66 117 88 103 98 C 93 105 80 106 64 106 C 48 106 35 105 25 98 C 11 88 8.5 66 10.5 47 C 13 25 31 22 64 22 Z"
-        fill="url(#body)" stroke="@edge@" stroke-opacity="@edgea@" stroke-width="1.1"/>
-  <path d="M 64 22 C 97 22 115 25 117.5 47 C 119.5 66 117 88 103 98 C 93 105 80 106 64 106 C 48 106 35 105 25 98 C 11 88 8.5 66 10.5 47 C 13 25 31 22 64 22 Z"
-        fill="url(#shade)"/>
-  <!-- seam -->
-  <path d="M 11 56 C 40 58.5 88 58.5 117 56" fill="none" stroke="#000" stroke-opacity="0.45" stroke-width="1.1"/>
-  <path d="M 11 57.6 C 40 60 88 60 117 57.6" fill="none" stroke="#fff" stroke-opacity="0.10" stroke-width="0.8"/>
-  <!-- battery light bar -->
-  <rect x="50" y="63" width="28" height="3" rx="1.5" fill="#ffffff" opacity="0.55" filter="url(#glow)"/>
-  <rect x="51" y="63.3" width="26" height="2.4" rx="1.2" fill="#ffffff"/>
+
+  <g id="shadow">
+    <ellipse cx="64" cy="108" rx="50" ry="5" fill="#000" opacity="0.45" filter="url(#soft)"/>
+    <ellipse cx="64" cy="106.5" rx="36" ry="2.2" fill="#000" opacity="0.6" filter="url(#soft1)"/>
+  </g>
+
+  <!-- lid and base, each lit as its own solid -->
+  <g clip-path="url(#shellclip)">
+    <g clip-path="url(#lidclip)">
+      <g filter="url(#satin)"><use href="#shell" fill="url(#lid)"/></g>
+    </g>
+    <g clip-path="url(#baseclip)">
+      <g filter="url(#satin)"><use href="#shell" fill="url(#base)"/></g>
+    </g>
+    <!-- gap between lid and base -->
+    <path d="M 0 56 C 40 58.5 88 58.5 128 56 L 128 57.6 C 88 60 40 60 0 57.6 Z" fill="@lo@"/>
+
+    <use href="#shell" fill="url(#flanks)"/>
+    <!-- the lid casts a thin shadow on the base just under the seam -->
+    <path d="M 0 58.2 C 40 60.6 88 60.6 128 58.2" fill="none" stroke="#000" stroke-opacity="0.45" stroke-width="2.6" filter="url(#soft1)"/>
+    <!-- lid's lower lip catches a little light -->
+    <path d="M 11 55.4 C 40 57.9 88 57.9 117 55.4" fill="none" stroke="#fff" stroke-opacity="0.16" stroke-width="0.7"/>
+    <!-- seam line -->
+    <path d="M 11 56.8 C 40 59.3 88 59.3 117 56.8" fill="none" stroke="#000" stroke-opacity="0.75" stroke-width="1"/>
+    <!-- ground bounce on the bottom, occlusion where it rests -->
+    <path d="M 20 96 C 40 104 88 104 108 96 L 108 110 L 20 110 Z" fill="#000" opacity="0.3" filter="url(#soft)"/>
+    <!-- window reflection on the lid's curvature -->
+    <path d="M 24 30 C 40 25.5 74 25 96 27.5 C 74 28 46 29.5 26 34 Z" fill="#fff" opacity="@refl@" filter="url(#soft1)"/>
+    <!-- inner rim light -->
+    <use href="#shell" fill="none" stroke="url(#rim)" stroke-opacity="@rima@" stroke-width="2.6"/>
+  </g>
+  <use href="#shell" fill="none" stroke="@edge@" stroke-opacity="@edgea@" stroke-width="0.7"/>
+
+  <!-- recessed battery light strip -->
+  <rect x="48.5" y="65" width="31" height="4.4" rx="2.2" fill="#000" opacity="0.55"/>
+  <path d="M 50 69.6 L 78 69.6" stroke="#fff" stroke-opacity="0.18" stroke-width="0.6" stroke-linecap="round"/>
+  <rect x="50" y="66" width="28" height="2.6" rx="1.3" fill="#ffffff" opacity="0.6" filter="url(#glow)"/>
+  <rect x="50.5" y="66.2" width="27" height="2.2" rx="1.1" fill="url(#led)"/>
 </svg>
