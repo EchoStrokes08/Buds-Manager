@@ -95,6 +95,7 @@ def notify(summary, body=""):
 
 def refresh_waybar():
     subprocess.run(["pkill", "-RTMIN+8", "waybar"], stderr=subprocess.DEVNULL)
+    _notify_quickshell()
 
 
 def save_backup(st, path):
@@ -639,3 +640,12 @@ def main(argv=None):
         if getattr(args, "notify", False):
             notify("Redmi Buds", str(e))
         sys.exit(f"error: {e}")
+
+
+def _notify_quickshell():
+    """Same refresh for a Quickshell bar (qs ipc call barra refrescar buds); silent if absent."""
+    try:
+        subprocess.run(["qs", "ipc", "call", "barra", "refrescar", "buds"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+    except (OSError, subprocess.SubprocessError):
+        pass

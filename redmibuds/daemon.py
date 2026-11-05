@@ -185,6 +185,7 @@ class Holder:
     @staticmethod
     def _notify_waybar():
         subprocess.run(["pkill", "-RTMIN+8", "waybar"], stderr=subprocess.DEVNULL)
+        _notify_quickshell()
 
     # --- requests from local clients ---
 
@@ -354,3 +355,12 @@ def main():
         srv.server_close()
         if os.path.exists(SOCK_PATH):
             os.unlink(SOCK_PATH)
+
+
+def _notify_quickshell():
+    """Same refresh for a Quickshell bar (qs ipc call barra refrescar buds); silent if absent."""
+    try:
+        subprocess.run(["qs", "ipc", "call", "barra", "refrescar", "buds"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+    except (OSError, subprocess.SubprocessError):
+        pass
